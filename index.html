@@ -1,0 +1,1552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Inventory Manager</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#ffffff;--bg2:#f5f5f3;--bg3:#eeede8;
+  --text:#1a1a1a;--text2:#666666;--text3:#999999;
+  --border:#e0dfd8;--border2:#cccccc;
+  --blue-bg:#e8f0fb;--blue:#1a56a0;--blue-bdr:#b5d4f4;
+  --green-bg:#eaf3de;--green:#3b6d11;
+  --yellow-bg:#faeeda;--yellow:#854f0b;
+  --red-bg:#fcebeb;--red:#a32d2d;
+  --r:8px;--rl:12px;--th:56px;--bnh:60px;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#1e1e1c;--bg2:#2a2a28;--bg3:#2f2f2c;
+  --text:#f0efea;--text2:#aaaaaa;--text3:#666666;
+  --border:#3a3a36;--border2:#4a4a46;
+  --blue-bg:#0c2040;--blue:#7ab8f5;--blue-bdr:#185fa5;
+  --green-bg:#0d2005;--green:#8bcf4a;
+  --yellow-bg:#1f1200;--yellow:#f5c775;
+  --red-bg:#200a0a;--red:#f09595;
+}}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg3);color:var(--text);font-size:14px}
+
+/* ─ Layout ─ */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:100;height:var(--th);background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 16px;gap:10px}
+.t-title{font-size:17px;font-weight:700;white-space:nowrap}
+.t-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.sync-pill{display:flex;align-items:center;gap:5px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-size:12px;color:var(--text2)}
+.sdot{width:7px;height:7px;border-radius:50%;background:#ccc;transition:background .3s}
+.sdot.live{background:#4caf50}.sdot.err{background:#e53935}
+.dnav{display:flex;gap:4px}
+.dnav button{padding:6px 12px;border-radius:var(--r);font-size:13px;cursor:pointer;background:transparent;border:1px solid transparent;color:var(--text2);transition:all .15s;white-space:nowrap}
+.dnav button:hover{background:var(--bg2)}
+.dnav button.on{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-bdr);font-weight:600}
+.bnav{position:fixed;bottom:0;left:0;right:0;z-index:100;height:var(--bnh);background:var(--bg);border-top:1px solid var(--border);display:none;align-items:stretch}
+.bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:none;background:transparent;cursor:pointer;color:var(--text2);font-size:10px;padding:6px 2px;transition:color .15s}
+.bnav-btn .ni{font-size:20px;line-height:1}
+.bnav-btn.on{color:var(--blue)}
+.page{padding-top:calc(var(--th) + 16px);padding-bottom:24px;min-height:100vh}
+.wrap{max-width:1200px;margin:0 auto;padding:0 16px}
+
+/* ─ Location tabs ─ */
+.tabs-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:14px;scrollbar-width:none}
+.tabs-wrap::-webkit-scrollbar{display:none}
+.tabs{display:flex;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);padding:7px;width:max-content;min-width:100%}
+.tab{padding:6px 14px;border:1px solid transparent;border-radius:var(--r);font-size:12px;cursor:pointer;background:transparent;color:var(--text2);white-space:nowrap;transition:all .15s}
+.tab:hover{background:var(--bg2)}
+.tab.on{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-bdr);font-weight:600}
+
+/* ─ Stats bar ─ */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.sc{background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);padding:12px 14px}
+.sc-lbl{font-size:10px;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.sc-val{font-size:24px;font-weight:700;color:var(--text)}
+.sc-val.y{color:var(--yellow)}.sc-val.r{color:var(--red)}
+
+/* ─ Card ─ */
+.card{background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:14px}
+.toolbar{padding:10px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+.si{flex:1;min-width:120px;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--r);font-size:14px;background:var(--bg2);color:var(--text)}
+.si:focus{outline:none;border-color:var(--blue-bdr)}
+.fsel{padding:8px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--text);cursor:pointer}
+.fsel:focus{outline:none;border-color:var(--blue-bdr)}
+
+/* ─ Buttons ─ */
+.btn{padding:8px 16px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;cursor:pointer;background:var(--bg);color:var(--text);transition:all .15s;white-space:nowrap;font-weight:500}
+.btn:hover{background:var(--bg2)}.btn:active{transform:scale(.97)}
+.btn.p{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-bdr)}
+.btn.p:hover{opacity:.9}
+.btn.sm{padding:5px 10px;font-size:12px}
+.btn.ic{padding:7px 9px;font-size:15px}
+.ab{background:none;border:none;cursor:pointer;padding:5px 7px;border-radius:6px;font-size:14px;opacity:.6;transition:all .15s}
+.ab:hover{opacity:1;background:var(--bg2)}
+
+/* ─ Table ─ */
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--bg2);padding:10px 14px;text-align:left;font-weight:600;font-size:11px;color:var(--text2);border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--text)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg2)}
+.qc{display:flex;align-items:center;gap:4px}
+.qb{width:28px;height:28px;border:1px solid var(--border2);border-radius:6px;background:var(--bg2);color:var(--text);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .1s}
+.qb:hover{background:var(--bg3)}.qb:active{transform:scale(.88)}
+.qn{min-width:28px;text-align:center;font-weight:600}
+
+/* ─ Badges ─ */
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.badge.ok{background:var(--green-bg);color:var(--green)}
+.badge.low{background:var(--yellow-bg);color:var(--yellow)}
+.badge.out{background:var(--red-bg);color:var(--red)}
+.badge.exp{background:var(--red-bg);color:var(--red)}
+
+/* ─ Mobile cards ─ */
+.mcards{display:none;padding:8px}
+.mcard{background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);padding:14px;margin-bottom:10px}
+.mcard-hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px}
+.mcard-name{font-size:15px;font-weight:600;flex:1}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.mf{font-size:12px}
+.mf-l{color:var(--text3);display:block;margin-bottom:1px}
+.mf-v{color:var(--text2);font-weight:500}
+.mcard-foot{display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border)}
+.mcard-acts{display:flex;gap:6px}
+
+/* ─ Empty ─ */
+.empty{text-align:center;padding:40px 20px;color:var(--text2)}
+.empty-icon{font-size:36px;margin-bottom:10px}
+
+/* ─ Modal ─ */
+.mbg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:300;padding:0}
+.modal{background:var(--bg);border-radius:20px 20px 0 0;border:1px solid var(--border);padding:24px 20px 36px;width:100%;max-height:92vh;overflow-y:auto}
+.mhandle{width:40px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 18px}
+.modal h2{font-size:18px;font-weight:700;margin-bottom:18px}
+.fg{margin-bottom:14px}
+.fg label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.fg input,.fg select{width:100%;padding:11px 14px;border:1px solid var(--border2);border-radius:var(--r);font-size:16px;background:var(--bg2);color:var(--text);-webkit-appearance:none}
+.fg input:focus,.fg select:focus{outline:none;border-color:var(--blue-bdr)}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.macts{display:flex;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+.macts .btn{flex:1;padding:12px;font-size:15px;text-align:center}
+
+/* ─ Batch rows (Move + QtyAdj modals) ─ */
+.brow{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:10px 12px;background:var(--bg2);border-radius:var(--r)}
+.brow-info{flex:1;font-size:13px}
+.brow-loc{color:var(--blue);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.3px;margin-bottom:2px}
+.brow-exp{color:var(--text);font-weight:600}
+.brow-sub{color:var(--text3);font-size:12px}
+.brow input{width:72px;padding:8px 6px;border:1px solid var(--border2);border-radius:var(--r);font-size:15px;background:var(--bg);color:var(--text);text-align:center}
+.brow input:focus{outline:none;border-color:var(--blue-bdr)}
+
+/* ─ Scan ─ */
+.scan-zone{border:2px dashed var(--border2);border-radius:var(--rl);padding:28px 16px;text-align:center;color:var(--text2);font-size:14px;margin-bottom:14px;cursor:pointer}
+.scan-zone:hover{border-color:var(--blue-bdr);color:var(--blue)}
+.scan-res{padding:12px 14px;border-radius:var(--r);font-size:13px;min-height:40px;background:var(--bg2);color:var(--text2)}
+.scan-res.ok{background:var(--green-bg);color:var(--green)}
+.scan-res.no{background:var(--red-bg);color:var(--red)}
+
+/* ─ Activity ─ */
+.alog{padding:13px 16px;border-bottom:1px solid var(--border)}
+.alog:last-child{border-bottom:none}
+.alog-msg{font-size:13px;color:var(--text);line-height:1.4}
+.alog-time{font-size:11px;color:var(--text3);margin-top:3px}
+
+/* ─ Alert sections ─ */
+.sec-hdr{padding:12px 16px;border-bottom:1px solid var(--border);font-weight:700;font-size:14px}
+.arow{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.arow:last-child{border-bottom:none}
+.arow-info{flex:1;min-width:0}
+.arow-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.arow-sub{font-size:12px;color:var(--text2);margin-top:2px}
+
+/* ─ Location breakdown rows ─ */
+.loc-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.loc-row-txt{flex:1;font-size:12px;line-height:1.5}
+
+/* ─ Expiry calendar ─ */
+.ecal{border-left:4px solid var(--border);margin-bottom:12px}
+
+/* ─ Setup ─ */
+.setup-wrap{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - var(--th));padding:20px}
+.setup-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);padding:28px 24px;width:100%;max-width:480px}
+.setup-card h2{font-size:20px;font-weight:700;margin-bottom:10px;text-align:center}
+.setup-card p{color:var(--text2);font-size:14px;margin-bottom:20px;line-height:1.6;text-align:center}
+.setup-err{color:var(--red);font-size:13px;margin-top:10px;min-height:20px;text-align:center}
+
+/* ─ Settings ─ */
+.scard{background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;max-width:560px}
+.scard-hdr{padding:14px 18px;border-bottom:1px solid var(--border);font-weight:700;font-size:15px}
+.scard-body{padding:18px}
+
+/* ─ Spinner / FAB ─ */
+.spin{display:inline-block;width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.fab{display:none;position:fixed;right:18px;bottom:calc(var(--bnh) + 14px);z-index:99;width:54px;height:54px;border-radius:50%;background:var(--blue);color:#fff;border:none;font-size:28px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.25);align-items:center;justify-content:center}
+.fab:active{transform:scale(.93)}
+
+/* ─ Responsive ─ */
+@media(max-width:700px){
+  :root{--bnh:62px}
+  .page{padding-bottom:calc(var(--bnh) + 16px)}
+  .dnav{display:none}
+  .bnav{display:flex}
+  .fab{display:flex}
+  .tw table{display:none}
+  .mcards{display:block}
+  .stats{grid-template-columns:1fr 1fr}
+  .sc-val{font-size:22px}
+  .toolbar{flex-direction:column;align-items:stretch}
+  .si{min-width:unset}
+  .donly{display:none}
+  .frow{grid-template-columns:1fr}
+  .wrap{padding:0 10px}
+  .tabs{gap:4px;padding:6px}
+  .tab{padding:5px 10px;font-size:11px}
+}
+@media(min-width:701px){
+  .mcards{display:none}
+  .tw table{display:table}
+  .bnav,.fab{display:none}
+  .mbg{align-items:center;padding:20px}
+  .modal{border-radius:var(--rl);width:500px;max-width:100%}
+  .mhandle{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="t-title">📦 Inventory</div>
+  <div class="t-right">
+    <div class="sync-pill">
+      <span class="sdot" id="sdot"></span>
+      <span id="slbl">Connecting…</span>
+    </div>
+    <div class="dnav">
+      <button id="nav-inv" onclick="V('inv')">Inventory</button>
+      <button id="nav-act" onclick="V('act')">Activity</button>
+      <button id="nav-alr" onclick="V('alr')">⚠️ Alerts</button>
+      <button id="nav-exp" onclick="V('exp')">🗓️ Expiration</button>
+      <button id="nav-cfg" onclick="V('cfg')">⚙️</button>
+    </div>
+  </div>
+</div>
+
+<div class="page"><div class="wrap" id="app">
+  <div style="text-align:center;padding:60px;color:var(--text2)"><div class="spin"></div>Loading…</div>
+</div></div>
+
+<div class="bnav" id="bnav">
+  <button class="bnav-btn" id="bnav-inv" onclick="V('inv')"><span class="ni">📦</span>Inventory</button>
+  <button class="bnav-btn" id="bnav-act" onclick="V('act')"><span class="ni">📋</span>Activity</button>
+  <button class="bnav-btn" id="bnav-alr" onclick="V('alr')"><span class="ni">⚠️</span>Alerts</button>
+  <button class="bnav-btn" id="bnav-exp" onclick="V('exp')"><span class="ni">🗓️</span>Expiry</button>
+  <button class="bnav-btn" id="bnav-cfg" onclick="V('cfg')"><span class="ni">⚙️</span>Settings</button>
+</div>
+<button class="fab" id="fab" onclick="openAdd()">+</button>
+<div id="mroot"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, push, onValue, remove, update }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+/* ════════════════════════════════════════════
+   CONSTANTS
+════════════════════════════════════════════ */
+const LOCS = [
+  "APC Storage","APC Weight Room","APC Loading Dock",
+  "JMA Rowing Side","JMA Weight Room Side",
+  "Rodkin Cabinets","Rodkin Loading Dock","Rodkin Storage Pod"
+];
+const CATS = [
+  "Cleaning Supplies","Equipment","Medical/First Aid","Food & Beverage",
+  "PPE","Office Supplies","Maintenance","Other"
+];
+const CFG_KEY  = "inv_fb_cfg";
+const DEF_LOW  = 5;
+
+/* ════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════ */
+let db         = null;
+let DB         = {};      // { firebaseId: itemObject }
+let LOGS       = [];      // activity log sorted newest first
+let modalOpen  = false;   // blocks onValue from re-rendering while modal is open
+
+const UI = { view:"inv", tab:0, fStatus:"all", fCat:"all", search:"" };
+
+/* ════════════════════════════════════════════
+   CONFIG / LOCAL STORAGE
+════════════════════════════════════════════ */
+function getCfg(){
+  try{ return JSON.parse(localStorage.getItem(CFG_KEY)); }catch(e){ return null; }
+}
+function saveCfg(c){ localStorage.setItem(CFG_KEY, JSON.stringify(c)); }
+
+/* ════════════════════════════════════════════
+   FIREBASE INIT + LISTENERS
+════════════════════════════════════════════ */
+function initFB(cfg){
+  try{
+    db = getDatabase(initializeApp(cfg));
+    onValue(ref(db,"items"), snap=>{
+      DB = snap.val() || {};
+      dot(true);
+      if(!modalOpen) render();
+    }, err=>{ dot(false); console.error(err); });
+    onValue(ref(db,"activity"), snap=>{
+      const raw = snap.val() || {};
+      LOGS = Object.values(raw).sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,200);
+      if(UI.view==="act" && !modalOpen) render();
+    });
+  }catch(err){ console.error(err); }
+}
+
+function dot(live){
+  const d=document.getElementById("sdot"), l=document.getElementById("slbl");
+  if(d) d.className="sdot "+(live?"live":"err");
+  if(l) l.textContent=live?"Live":"Offline";
+}
+
+/* ════════════════════════════════════════════
+   SAFE FIREBASE WRITES
+   ALL writes go through these — never write undefined/null.
+════════════════════════════════════════════ */
+
+// Clean a data object before any Firebase write
+function clean(d){
+  return {
+    name:      String(d.name||"").trim(),
+    sku:       String(d.sku||"").trim(),
+    category:  d.category||CATS[0],
+    location:  d.location||LOCS[0],
+    qty:       Math.max(0, Number(d.qty)||0),
+    locThresh: Math.max(1, Number(d.locThresh)||DEF_LOW),  // per-location alert
+    grpThresh: Math.max(1, Number(d.grpThresh)||DEF_LOW),  // combined-total alert (All tab)
+    expDate:   String(d.expDate||""),
+    notes:     String(d.notes||"").trim(),
+    createdAt: d.createdAt||Date.now()
+  };
+}
+
+async function fAdd(data){
+  const r = push(ref(db,"items"));
+  await set(r, clean(data));
+  await fLog(`Added "${data.name}" → ${data.location} (qty: ${data.qty})`);
+}
+
+async function fUpdate(id, fields){
+  // Only write the keys provided — never overwrite unrelated fields
+  const safe = {};
+  if(fields.name      !== undefined) safe.name      = String(fields.name||"").trim();
+  if(fields.sku       !== undefined) safe.sku        = String(fields.sku||"").trim();
+  if(fields.category  !== undefined) safe.category   = fields.category||CATS[0];
+  if(fields.location  !== undefined) safe.location   = fields.location||LOCS[0];
+  if(fields.qty       !== undefined) safe.qty        = Math.max(0,Number(fields.qty)||0);
+  if(fields.locThresh !== undefined) safe.locThresh  = Math.max(1,Number(fields.locThresh)||DEF_LOW);
+  if(fields.grpThresh !== undefined) safe.grpThresh  = Math.max(1,Number(fields.grpThresh)||DEF_LOW);
+  if(fields.expDate   !== undefined) safe.expDate    = String(fields.expDate||"");
+  if(fields.notes     !== undefined) safe.notes      = String(fields.notes||"").trim();
+  await update(ref(db,`items/${id}`), safe);
+}
+
+async function fSetQty(id, qty){
+  await update(ref(db,`items/${id}`), { qty: Math.max(0,Number(qty)||0) });
+}
+
+async function fDelete(id){
+  await remove(ref(db,`items/${id}`));
+}
+
+async function fLog(msg){
+  await set(push(ref(db,"activity")), {
+    msg: String(msg),
+    ts:  Date.now(),
+    time:new Date().toLocaleString()
+  });
+}
+
+/* ════════════════════════════════════════════
+   DATA HELPERS
+════════════════════════════════════════════ */
+const esc  = s => (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const days = d => d ? Math.ceil((new Date(d)-new Date())/86400000) : null;
+
+// Return all valid items as an array
+function allItems(){
+  return Object.entries(DB)
+    .filter(([,v]) => v && v.name && String(v.name).trim() && v.location && String(v.location).trim())
+    .map(([id,v]) => ({...v, id,
+      // Backward-compat: old records may have `lowThreshold` instead of locThresh/grpThresh
+      locThresh: Number(v.locThresh) || Number(v.lowThreshold) || DEF_LOW,
+      grpThresh: Number(v.grpThresh) || Number(v.lowThreshold) || DEF_LOW
+    }));
+}
+
+// Encode array of Firebase IDs safely for HTML onclick attributes
+const encIds = ids => encodeURIComponent(ids.join(","));
+const decIds = s   => decodeURIComponent(s).split(",").filter(Boolean);
+
+/* ════════════════════════════════════════════
+   GROUPING
+════════════════════════════════════════════ */
+function byNameLoc(arr){
+  // Group by name+location → used for location tabs
+  const m = {};
+  arr.forEach(i => {
+    const k = i.name.toLowerCase().trim() + "||" + i.location;
+    (m[k] = m[k]||[]).push(i);
+  });
+  return Object.values(m).sort((a,b)=>a[0].name.localeCompare(b[0].name));
+}
+
+function byName(arr){
+  // Group by name only → used for All tab (combines all locations)
+  const m = {};
+  arr.forEach(i => {
+    const k = i.name.toLowerCase().trim();
+    (m[k] = m[k]||[]).push(i);
+  });
+  return Object.values(m).sort((a,b)=>a[0].name.localeCompare(b[0].name));
+}
+
+/* ════════════════════════════════════════════
+   STATUS LOGIC
+
+   Two separate thresholds:
+   ─ grpThresh: set from All-tab group edit
+                compared against COMBINED total across ALL locations
+   ─ locThresh: set from individual item edit
+                compared against that location's combined total only
+
+   allStatus(nameGroup)  → uses grpThresh + combined total
+   locStatus(locGroup)   → uses locThresh + location total
+════════════════════════════════════════════ */
+function allStatus(nameGroup){
+  const total = nameGroup.reduce((s,i)=>s+(i.qty||0), 0);
+  if(total === 0) return "out";
+  if(nameGroup.some(i=>i.expDate && new Date(i.expDate)<new Date())) return "exp";
+  // grpThresh: take the maximum set across any record in the group
+  const thresh = nameGroup.reduce((mx,i)=>Math.max(mx, i.grpThresh||DEF_LOW), 0);
+  return total <= thresh ? "low" : "ok";
+}
+
+function locStatus(locGroup){
+  const total = locGroup.reduce((s,i)=>s+(i.qty||0), 0);
+  if(total === 0) return "out";
+  if(locGroup.some(i=>i.expDate && new Date(i.expDate)<new Date())) return "exp";
+  const thresh = locGroup.reduce((mx,i)=>Math.max(mx, i.locThresh||DEF_LOW), 0);
+  return total <= thresh ? "low" : "ok";
+}
+
+const stLabel = s => ({ok:"In Stock",low:"Low Stock",out:"Out of Stock",exp:"Expired"}[s]||s);
+
+/* ════════════════════════════════════════════
+   STATS
+════════════════════════════════════════════ */
+function calcStats(arr, isAll){
+  const groups = isAll ? byName(arr) : byNameLoc(arr);
+  let low=0, out=0;
+  const expSet = new Set();
+  groups.forEach(g => {
+    const st = isAll ? allStatus(g) : locStatus(g);
+    if(st==="out") out++;
+    else if(st==="low") low++;
+    g.forEach(i=>{ const d=days(i.expDate); if(d!==null&&d>0&&d<=30) expSet.add(i.name.toLowerCase()+"||"+i.location); });
+  });
+  return { total:groups.length, low, out, expiring:expSet.size };
+}
+
+/* ════════════════════════════════════════════
+   FILTERING
+════════════════════════════════════════════ */
+function filtered(){
+  let arr = allItems();
+
+  // Scope to current tab
+  if(UI.tab > 0) arr = arr.filter(i=>i.location===LOCS[UI.tab-1]);
+
+  // Status filter
+  if(UI.fStatus !== "all"){
+    if(UI.tab === 0){
+      // All tab: compute combined status per name, show only one record per name group
+      const nameMap = {};  // name.lower → { total, thresh, hasExp }
+      arr.forEach(i => {
+        const k = i.name.toLowerCase().trim();
+        if(!nameMap[k]) nameMap[k] = { total:0, thresh:0, hasExp:false };
+        nameMap[k].total += (i.qty||0);
+        if(i.grpThresh > nameMap[k].thresh) nameMap[k].thresh = i.grpThresh;
+        if(i.expDate && new Date(i.expDate)<new Date()) nameMap[k].hasExp = true;
+      });
+      const seenName = new Set();
+      arr = arr.filter(i => {
+        const k = i.name.toLowerCase().trim();
+        const nm = nameMap[k] || {};
+        const st = nm.total===0?"out": nm.hasExp?"exp": nm.total<=nm.thresh?"low":"ok";
+        if(st !== UI.fStatus) return false;
+        if(seenName.has(k)) return false;
+        seenName.add(k);
+        return true;
+      });
+    } else {
+      // Location tab: compute combined status per name+location
+      const nlMap = {};
+      arr.forEach(i => {
+        const k = i.name.toLowerCase().trim()+"||"+i.location;
+        if(!nlMap[k]) nlMap[k] = { total:0, thresh:0, hasExp:false };
+        nlMap[k].total += (i.qty||0);
+        if(i.locThresh > nlMap[k].thresh) nlMap[k].thresh = i.locThresh;
+        if(i.expDate && new Date(i.expDate)<new Date()) nlMap[k].hasExp = true;
+      });
+      arr = arr.filter(i => {
+        const k = i.name.toLowerCase().trim()+"||"+i.location;
+        const nm = nlMap[k] || {};
+        const st = nm.total===0?"out": nm.hasExp?"exp": nm.total<=nm.thresh?"low":"ok";
+        return st === UI.fStatus;
+      });
+    }
+  }
+
+  // Category filter
+  if(UI.fCat !== "all") arr = arr.filter(i=>i.category===UI.fCat);
+
+  // Search
+  if(UI.search){
+    const q = UI.search.toLowerCase();
+    arr = arr.filter(i =>
+      i.name.toLowerCase().includes(q) ||
+      (i.sku||"").toLowerCase().includes(q) ||
+      (i.notes||"").toLowerCase().includes(q)
+    );
+  }
+
+  return arr.sort((a,b)=>a.name.localeCompare(b.name));
+}
+
+/* ════════════════════════════════════════════
+   EXPIRATION SUMMARY HTML
+════════════════════════════════════════════ */
+function expHtml(group){
+  const sorted = group.filter(i=>i.expDate).sort((a,b)=>new Date(a.expDate)-new Date(b.expDate));
+  const noDate = group.filter(i=>!i.expDate);
+  const parts  = sorted.map(i=>{
+    const d=days(i.expDate), warn=d!==null&&d<=30;
+    return `<span style="${warn?"color:var(--red);font-weight:600":""}">${i.qty}×&nbsp;${i.expDate}${warn?" ⚠️":""}</span>`;
+  });
+  if(noDate.length){
+    const ndqty = noDate.reduce((s,i)=>s+(i.qty||0),0);
+    parts.push(`<span style="color:var(--text3)">${ndqty}×&nbsp;no date</span>`);
+  }
+  return parts.join('<span style="color:var(--text3)"> · </span>') || "—";
+}
+
+/* ════════════════════════════════════════════
+   LOCATION BREAKDOWN HTML (All tab)
+════════════════════════════════════════════ */
+function locBreak(nameGroup){
+  // Sub-group by location
+  const m = {};
+  nameGroup.filter(i=>i.location).forEach(i=>{ (m[i.location]=m[i.location]||[]).push(i); });
+  if(!Object.keys(m).length) return `<span style="color:var(--text3)">No locations</span>`;
+  return Object.entries(m).sort((a,b)=>a[0].localeCompare(b[0])).map(([loc,its])=>{
+    const qty = its.reduce((s,i)=>s+(i.qty||0),0);
+    const sid = encIds(its.map(i=>i.id));
+    return `<div class="loc-row">
+      <div class="loc-row-txt">
+        <span style="font-weight:600">${qty}×</span>
+        <span style="color:var(--text2);margin-left:4px">${esc(loc)}</span>
+        <span style="color:var(--text3);font-size:11px;margin-left:6px">${expHtml(its)}</span>
+      </div>
+      <button class="ab" style="opacity:.4;font-size:12px" onclick="doDelGroup('${sid}')" title="Delete ${esc(loc)}">🗑️</button>
+    </div>`;
+  }).join("");
+}
+
+/* ════════════════════════════════════════════
+   ROUTING
+════════════════════════════════════════════ */
+function V(view){
+  UI.view = view;
+  ["inv","act","alr","exp","cfg"].forEach(v=>{
+    document.getElementById("nav-"+v)?.classList.toggle("on", v===view);
+    document.getElementById("bnav-"+v)?.classList.toggle("on", v===view);
+  });
+  const fab = document.getElementById("fab");
+  if(fab) fab.style.display = view==="inv" ? "flex" : "none";
+  render();
+}
+
+function render(){
+  const app = document.getElementById("app");
+  if(!app) return;
+  if(UI.view==="inv") renderInv(app);
+  else if(UI.view==="act") renderAct(app);
+  else if(UI.view==="alr") renderAlr(app);
+  else if(UI.view==="exp") renderExp(app);
+  else if(UI.view==="cfg") renderCfg(app);
+}
+
+/* ════════════════════════════════════════════
+   SHARED HTML FRAGMENTS
+════════════════════════════════════════════ */
+function tabsHtml(){
+  return `<div class="tabs-wrap"><div class="tabs">
+    <button class="tab ${UI.tab===0?"on":""}" onclick="UI.tab=0;render()">All</button>
+    ${LOCS.map((l,i)=>`<button class="tab ${UI.tab===i+1?"on":""}" onclick="UI.tab=${i+1};render()">${esc(l)}</button>`).join("")}
+  </div></div>`;
+}
+
+function statsHtml(arr, isAll){
+  const s = calcStats(arr, isAll);
+  return `<div class="stats">
+    <div class="sc"><div class="sc-lbl">${isAll?"Unique Items":"Line Items"}</div><div class="sc-val">${s.total}</div></div>
+    <div class="sc"><div class="sc-lbl">Low Stock</div><div class="sc-val ${s.low>0?"y":""}">${s.low}</div></div>
+    <div class="sc"><div class="sc-lbl">Out of Stock</div><div class="sc-val ${s.out>0?"r":""}">${s.out}</div></div>
+    <div class="sc"><div class="sc-lbl">Expiring (30d)</div><div class="sc-val ${s.expiring>0?"y":""}">${s.expiring}</div></div>
+  </div>`;
+}
+
+function toolbarHtml(){
+  return `<div class="toolbar">
+    <input class="si" type="text" placeholder="🔍 Search name, SKU, notes…"
+      value="${esc(UI.search)}" oninput="UI.search=this.value;render()">
+    <div style="display:flex;gap:6px;width:100%;flex-wrap:wrap">
+      <select class="fsel" style="flex:1" onchange="UI.fStatus=this.value;render()">
+        <option value="all" ${UI.fStatus==="all"?"selected":""}>All Status</option>
+        <option value="ok"  ${UI.fStatus==="ok" ?"selected":""}>In Stock</option>
+        <option value="low" ${UI.fStatus==="low"?"selected":""}>Low Stock</option>
+        <option value="out" ${UI.fStatus==="out"?"selected":""}>Out of Stock</option>
+        <option value="exp" ${UI.fStatus==="exp"?"selected":""}>Expired</option>
+      </select>
+      <select class="fsel" style="flex:1" onchange="UI.fCat=this.value;render()">
+        <option value="all">All Categories</option>
+        ${CATS.map(c=>`<option value="${esc(c)}" ${UI.fCat===c?"selected":""}>${esc(c)}</option>`).join("")}
+      </select>
+      <button class="btn donly" onclick="openScan()">📷 Scan</button>
+      <button class="btn p donly" onclick="openAdd()">+ Add</button>
+    </div>
+  </div>`;
+}
+
+function emptyMsg(arr){
+  return arr.length===0 && !UI.search && UI.fStatus==="all" && UI.fCat==="all"
+    ? "No items yet — tap + to add one."
+    : "No items match your filters.";
+}
+
+/* ════════════════════════════════════════════
+   RENDER: INVENTORY
+════════════════════════════════════════════ */
+function renderInv(app){
+  const isAll  = UI.tab === 0;
+  const scope  = isAll ? allItems() : allItems().filter(i=>i.location===LOCS[UI.tab-1]);
+  const arr    = filtered();
+
+  /* ── ALL TAB ── */
+  if(isAll){
+    const groups = byName(arr);
+    let trows="", cards="";
+
+    if(!groups.length){
+      const e=`<div class="empty"><div class="empty-icon">📭</div>${emptyMsg(arr)}</div>`;
+      trows=`<tr><td colspan="7">${e}</td></tr>`; cards=e;
+    } else {
+      groups.forEach(g=>{
+        const rep    = g[0];
+        const total  = g.reduce((s,i)=>s+(i.qty||0),0);
+        const st     = allStatus(g);
+        const sid    = encIds(g.map(i=>i.id));
+        const lcount = [...new Set(g.map(i=>i.location))].length;
+        const thresh = g.reduce((mx,i)=>Math.max(mx,i.grpThresh||DEF_LOW),0);
+
+        trows+=`<tr>
+          <td style="font-weight:600;vertical-align:top">${esc(rep.name)}</td>
+          <td style="vertical-align:top">${esc(rep.category||"—")}</td>
+          <td style="vertical-align:top">${esc(rep.sku||"—")}</td>
+          <td style="vertical-align:top">
+            <div style="font-size:22px;font-weight:700">${total}</div>
+            <div style="font-size:11px;color:var(--text3)">${lcount} loc${lcount!==1?"s":""} · alert@${thresh}</div>
+          </td>
+          <td style="vertical-align:top"><span class="badge ${st}">${stLabel(st)}</span></td>
+          <td style="white-space:normal;font-size:12px;line-height:1.9;vertical-align:top">${locBreak(g)}</td>
+          <td style="vertical-align:top;white-space:nowrap">
+            <button class="ab" title="Edit group" onclick="openGrpEdit('${sid}')">✏️</button>
+            <button class="ab" title="Move stock" onclick="openMove('${sid}')">🚚</button>
+            <button class="ab" title="Delete all"  onclick="doDelGroup('${sid}')">🗑️</button>
+          </td></tr>`;
+
+        cards+=`<div class="mcard">
+          <div class="mcard-hdr"><div class="mcard-name">${esc(rep.name)}</div><span class="badge ${st}">${stLabel(st)}</span></div>
+          <div style="display:flex;gap:16px;margin-bottom:10px">
+            <div><div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Total Qty</div><div style="font-size:22px;font-weight:700">${total}</div></div>
+            <div><div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Category</div>
+              <div style="font-size:13px;color:var(--text2)">${esc(rep.category||"—")}</div>
+              <div style="font-size:11px;color:var(--text3)">${lcount} loc · alert@${thresh}</div></div>
+          </div>
+          <div style="background:var(--bg2);border-radius:var(--r);padding:10px;margin-bottom:10px">${locBreak(g)}</div>
+          <div class="mcard-foot">
+            <div>
+              <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Total Qty</div>
+              <div style="font-size:22px;font-weight:700">${total}</div>
+            </div>
+            <div class="mcard-acts">
+              <button class="btn ic" onclick="openGrpEdit('${sid}')">✏️</button>
+              <button class="btn ic" onclick="openMove('${sid}')">🚚</button>
+              <button class="btn ic" onclick="doDelGroup('${sid}')">🗑️</button>
+            </div></div></div>`;
+      });
+    }
+
+    app.innerHTML = tabsHtml() + statsHtml(scope,true) + `<div class="card">
+      ${toolbarHtml()}
+      <div class="tw"><table><thead><tr>
+        <th style="width:17%">Item</th><th style="width:12%">Category</th><th style="width:9%">SKU</th>
+        <th style="width:12%">Total Qty</th><th style="width:9%">Status</th>
+        <th style="width:33%">Location · Qty · Expiration</th><th style="width:8%">Actions</th>
+      </tr></thead><tbody>${trows}</tbody></table></div>
+      <div class="mcards">${cards}</div></div>`;
+    return;
+  }
+
+  /* ── LOCATION TAB ── */
+  const groups = byNameLoc(arr);
+  let trows="", cards="";
+
+  if(!groups.length){
+    const e=`<div class="empty"><div class="empty-icon">📭</div>${emptyMsg(arr)}</div>`;
+    trows=`<tr><td colspan="8">${e}</td></tr>`; cards=e;
+  } else {
+    groups.forEach(g=>{
+      const rep    = g[0];
+      const total  = g.reduce((s,i)=>s+(i.qty||0),0);
+      const st     = locStatus(g);
+      const single = g.length===1;
+      const sid    = encIds(g.map(i=>i.id));
+
+      const qctrl = single
+        ? `<div class="qc">
+            <button class="qb" onclick="doAdj('${rep.id}',-1)">−</button>
+            <span class="qn">${total}</span>
+            <button class="qb" onclick="doAdj('${rep.id}',1)">+</button>
+           </div>`
+        : `<div class="qc">
+            <span class="qn" style="font-size:15px">${total}</span>
+            <button class="btn sm" style="margin-left:6px" onclick="openQtyAdj('${sid}')">±</button>
+           </div>`;
+
+      trows+=`<tr>
+        <td style="font-weight:600">${esc(rep.name)}</td>
+        <td>${esc(rep.location)}</td>
+        <td>${esc(rep.category||"—")}</td>
+        <td>${esc(rep.sku||"—")}</td>
+        <td>${qctrl}</td>
+        <td><span class="badge ${st}">${stLabel(st)}</span></td>
+        <td style="white-space:normal;font-size:12px;line-height:1.7">${expHtml(g)}</td>
+        <td style="white-space:nowrap">
+          <button class="ab" onclick="openMove('${sid}')">🚚</button>
+          <button class="ab" onclick="openEdit('${rep.id}')">✏️</button>
+          <button class="ab" onclick="doDelOne('${rep.id}')">🗑️</button>
+        </td></tr>`;
+
+      cards+=`<div class="mcard">
+        <div class="mcard-hdr"><div class="mcard-name">${esc(rep.name)}</div><span class="badge ${st}">${stLabel(st)}</span></div>
+        <div class="mgrid">
+          <div class="mf"><span class="mf-l">Location</span><span class="mf-v">${esc(rep.location)}</span></div>
+          <div class="mf"><span class="mf-l">Category</span><span class="mf-v">${esc(rep.category||"—")}</span></div>
+          <div class="mf"><span class="mf-l">SKU</span><span class="mf-v">${esc(rep.sku||"—")}</span></div>
+          <div class="mf" style="grid-column:span 2"><span class="mf-l">Expiration(s)</span><span class="mf-v" style="font-size:12px">${expHtml(g)}</span></div>
+        </div>
+        <div class="mcard-foot">
+          ${single
+            ?`<div class="qc"><button class="qb" onclick="doAdj('${rep.id}',-1)">−</button><span class="qn" style="font-size:16px">${total}</span><button class="qb" onclick="doAdj('${rep.id}',1)">+</button></div>`
+            :`<div class="qc"><span style="font-weight:700;font-size:18px">${total}</span><button class="btn" style="margin-left:8px" onclick="openQtyAdj('${sid}')">± Adjust</button></div>`}
+          <div class="mcard-acts">
+            <button class="btn ic" onclick="openMove('${sid}')">🚚</button>
+            <button class="btn ic" onclick="openEdit('${rep.id}')">✏️</button>
+            <button class="btn ic" onclick="doDelOne('${rep.id}')">🗑️</button>
+          </div></div></div>`;
+    });
+  }
+
+  app.innerHTML = tabsHtml() + statsHtml(scope,false) + `<div class="card">
+    ${toolbarHtml()}
+    <div class="tw"><table><thead><tr>
+      <th>Item</th><th>Location</th><th>Category</th><th>SKU</th>
+      <th>Qty</th><th>Status</th><th>Expiration(s)</th><th>Actions</th>
+    </tr></thead><tbody>${trows}</tbody></table></div>
+    <div class="mcards">${cards}</div></div>`;
+}
+
+/* ════════════════════════════════════════════
+   RENDER: ACTIVITY
+════════════════════════════════════════════ */
+function renderAct(app){
+  let h = `<div class="card">`;
+  if(!LOGS.length){
+    h += `<div class="empty"><div class="empty-icon">📋</div>No activity yet.</div>`;
+  } else {
+    h += `<div style="padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text2)">${LOGS.length} event(s) — synced live</div>`;
+    LOGS.forEach(a=>{ h+=`<div class="alog"><div class="alog-msg">${esc(a.msg)}</div><div class="alog-time">${a.time||"—"}</div></div>`; });
+  }
+  app.innerHTML = h + `</div>`;
+}
+
+/* ════════════════════════════════════════════
+   RENDER: ALERTS
+════════════════════════════════════════════ */
+function renderAlr(app){
+  const arr = allItems();
+  const now = new Date();
+
+  // ── PER-LOCATION low/out (locThresh vs location total) ──
+  const locMap = {};
+  LOCS.forEach(l=>{ locMap[l]=[]; });
+  byNameLoc(arr).forEach(g=>{
+    const loc = g[0].location;
+    const st  = locStatus(g);
+    if(st==="low"||st==="out") (locMap[loc]=locMap[loc]||[]).push({g,st});
+  });
+
+  // ── ALL-TAB combined low (grpThresh vs combined total) ──
+  const allLowG = byName(arr).filter(g=>allStatus(g)==="low");
+  const allOutG = byName(arr).filter(g=>allStatus(g)==="out");
+
+  // ── Expiry buckets grouped by location ──
+  const expByLoc  = {};   // already expired
+  const soon30    = {};   // expires in 1–30 days
+  const soon60    = {};   // expires in 31–60 days
+  arr.forEach(i=>{
+    const d = days(i.expDate);
+    if(!i.expDate) return;
+    if(new Date(i.expDate)<now){
+      (expByLoc[i.location]=expByLoc[i.location]||[]).push(i);
+    } else if(d!==null&&d<=30){
+      (soon30[i.location]=soon30[i.location]||[]).push(i);
+    } else if(d!==null&&d<=60){
+      (soon60[i.location]=soon60[i.location]||[]).push(i);
+    }
+  });
+
+  // Counts
+  const cntOut   = LOCS.reduce((s,l)=>s+(locMap[l]||[]).filter(r=>r.st==="out").length,0);
+  const cntLoc   = LOCS.reduce((s,l)=>s+(locMap[l]||[]).filter(r=>r.st==="low").length,0);
+  const cntExp   = Object.values(expByLoc).reduce((s,a)=>s+a.length,0);
+  const cnt30    = Object.values(soon30).reduce((s,a)=>s+a.length,0);
+  const cnt60    = Object.values(soon60).reduce((s,a)=>s+a.length,0);
+
+  // ── Row builders ──
+  function allRow(g){
+    const total  = g.reduce((s,i)=>s+(i.qty||0),0);
+    const st     = allStatus(g);
+    const thresh = g.reduce((mx,i)=>Math.max(mx,i.grpThresh||DEF_LOW),0);
+    const locs   = [...new Set(g.map(i=>i.location))].join(", ");
+    return `<div class="arow" style="padding-left:24px">
+      <div class="arow-info">
+        <div class="arow-name">${esc(g[0].name)}</div>
+        <div class="arow-sub">${esc(locs)} · Combined alert at: ${thresh}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-weight:700;font-size:15px">${total}</span>
+        <span class="badge ${st}">${stLabel(st)}</span>
+      </div></div>`;
+  }
+
+  function locRow(g, st){
+    const total  = g.reduce((s,i)=>s+(i.qty||0),0);
+    const thresh = g.reduce((mx,i)=>Math.max(mx,i.locThresh||DEF_LOW),0);
+    return `<div class="arow" style="padding-left:24px">
+      <div class="arow-info">
+        <div class="arow-name">${esc(g[0].name)}</div>
+        <div class="arow-sub">${esc(g[0].category||"—")} · Alert at: ${thresh}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-weight:700;font-size:15px">${total}</span>
+        <span class="badge ${st}">${stLabel(st)}</span>
+      </div></div>`;
+  }
+
+  function expRow(i){
+    const d = days(i.expDate);
+    return `<div class="arow" style="padding-left:24px">
+      <div class="arow-info">
+        <div class="arow-name">${esc(i.name)}</div>
+        <div class="arow-sub">${esc(i.category||"—")} · Exp: ${i.expDate}${d!==null?` (${d}d)`:""}</div>
+      </div>
+      <span style="font-weight:700;font-size:15px">${i.qty}</span>
+    </div>`;
+  }
+
+  function locHdr(loc, cnt){
+    return `<div style="padding:8px 16px 6px;background:var(--bg2);border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--blue);text-transform:uppercase;letter-spacing:.4px">
+      📍 ${esc(loc)} <span style="color:var(--text3);font-weight:400">(${cnt})</span>
+    </div>`;
+  }
+
+  function allHdr(cnt){
+    return `<div style="padding:8px 16px 6px;background:var(--bg3);border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text);text-transform:uppercase;letter-spacing:.4px">
+      🌐 All Locations — Combined Total <span style="color:var(--text3);font-weight:400">(${cnt})</span>
+    </div>`;
+  }
+
+  // Per-location rows only
+  function buildLocRows(stFilter){
+    let html="";
+    LOCS.forEach(loc=>{
+      const rows=(locMap[loc]||[]).filter(r=>r.st===stFilter);
+      if(!rows.length) return;
+      html+=locHdr(loc, rows.length);
+      rows.forEach(({g,st})=>{ html+=locRow(g,st); });
+    });
+    return html;
+  }
+
+  // Per-location expiry rows only (no all-locations header)
+  function buildExpRows(byLocObj){
+    let html="";
+    LOCS.forEach(loc=>{
+      const its=byLocObj[loc];
+      if(!its||!its.length) return;
+      html+=locHdr(loc, its.length);
+      its.forEach(i=>{ html+=expRow(i); });
+    });
+    return html;
+  }
+
+  function sec(color,title,innerHtml,empty){
+    return `<div class="card" style="margin-bottom:12px">
+      <div class="sec-hdr" style="color:${color}">${title}</div>
+      ${innerHtml||`<div style="padding:14px 16px;color:var(--text2);font-size:13px">${empty}</div>`}
+    </div>`;
+  }
+
+  // Out of Stock: per-location only
+  const outHtml = buildLocRows("out");
+
+  // Low Stock: combined All-tab section first, then per-location
+  let lowHtml = "";
+  if(allLowG.length){
+    lowHtml += allHdr(allLowG.length);
+    allLowG.forEach(g=>{ lowHtml+=allRow(g); });
+  }
+  lowHtml += buildLocRows("low");
+
+  app.innerHTML =
+    sec("var(--red)",   `🚫 Out of Stock (${cntOut})`,          outHtml||"",  "No out-of-stock items.")   +
+    sec("var(--yellow)",`⚠️ Low Stock (${allLowG.length} combined · ${cntLoc} by location)`, lowHtml||"", "No low-stock items.") +
+    sec("var(--red)",   `🗓️ Expired (${cntExp})`,               buildExpRows(expByLoc), "No expired items.") +
+    sec("var(--yellow)",`⏳ Expiring in 30 Days (${cnt30})`,     buildExpRows(soon30),   "Nothing expiring in 30 days.") +
+    sec("var(--blue)",  `📅 Expiring in 31–60 Days (${cnt60})`,  buildExpRows(soon60),   "Nothing expiring in 31–60 days.");
+}
+
+/* ════════════════════════════════════════════
+   RENDER: EXPIRATION CALENDAR
+════════════════════════════════════════════ */
+function renderExp(app){
+  const arr     = allItems();
+  const withD   = arr.filter(i=>i.expDate);
+  const noD     = arr.filter(i=>!i.expDate);
+  const now     = new Date();
+  const buckets = {};
+  withD.forEach(i=>{
+    const d=new Date(i.expDate);
+    const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+    (buckets[k]=buckets[k]||[]).push(i);
+  });
+  const keys = Object.keys(buckets).sort();
+
+  function urgency(k){
+    const [y,m]=k.split("-");
+    const me=new Date(+y,+m,0);
+    if(me<now) return "past";
+    const ms=new Date(+y,+m-1,1);
+    if(ms.getFullYear()===now.getFullYear()&&ms.getMonth()===now.getMonth()) return "cur";
+    const nxt=new Date(now.getFullYear(),now.getMonth()+1,1);
+    if(ms>=nxt&&ms<new Date(now.getFullYear(),now.getMonth()+2,1)) return "next";
+    return "future";
+  }
+  const US={
+    past:  {b:"var(--red)",   h:"var(--red)",   bg:"var(--red-bg)",   ic:"🚫"},
+    cur:   {b:"var(--yellow)",h:"var(--yellow)",bg:"var(--yellow-bg)",ic:"⚠️"},
+    next:  {b:"var(--yellow)",h:"var(--yellow)",bg:"var(--yellow-bg)",ic:"⏳"},
+    future:{b:"var(--border)",h:"var(--text2)", bg:"var(--bg2)",       ic:"🗓️"}
+  };
+  function mlabel(k){const[y,m]=k.split("-");return new Date(+y,+m-1,1).toLocaleString("default",{month:"long",year:"numeric"});}
+  function irow(i){
+    const d=days(i.expDate);
+    const dt=d===null?"":(d<=0?" · EXPIRED":d<=30?` · ${d}d left`:` · ${d}d`);
+    return `<div class="arow"><div class="arow-info"><div class="arow-name">${esc(i.name)}</div><div class="arow-sub">${esc(i.location)} · ${esc(i.category||"—")}${dt}</div></div><span style="font-weight:700">${i.qty}</span></div>`;
+  }
+  const expC  = withD.filter(i=>new Date(i.expDate)<now).length;
+  const thisM = withD.filter(i=>{const d=new Date(i.expDate);return d>=now&&d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();}).length;
+  const n30   = withD.filter(i=>{const d=days(i.expDate);return d!==null&&d>0&&d<=30;}).length;
+
+  let h=`<div class="stats" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">
+    <div class="sc"><div class="sc-lbl">With Exp. Date</div><div class="sc-val">${withD.length}</div></div>
+    <div class="sc"><div class="sc-lbl">Expired</div><div class="sc-val ${expC>0?"r":""}">${expC}</div></div>
+    <div class="sc"><div class="sc-lbl">This Month</div><div class="sc-val ${thisM>0?"y":""}">${thisM}</div></div>
+    <div class="sc"><div class="sc-lbl">Next 30 Days</div><div class="sc-val ${n30>0?"y":""}">${n30}</div></div>
+  </div>`;
+
+  if(!keys.length&&!noD.length){ h+=`<div class="card"><div class="empty"><div class="empty-icon">🗓️</div>No expiration dates set yet.</div></div>`; app.innerHTML=h; return; }
+
+  keys.forEach(k=>{
+    const u=urgency(k),s=US[u];
+    const its=buckets[k].slice().sort((a,b)=>new Date(a.expDate)-new Date(b.expDate));
+    h+=`<div class="card ecal" style="border-left-color:${s.b}">
+      <div class="sec-hdr" style="color:${s.h};background:${s.bg};display:flex;justify-content:space-between;align-items:center">
+        <span>${s.ic} ${mlabel(k)}</span><span style="font-size:12px;opacity:.8">${its.length} item${its.length!==1?"s":""}</span>
+      </div>${its.map(irow).join("")}</div>`;
+  });
+  if(noD.length){
+    h+=`<div class="card" style="opacity:.75">
+      <div class="sec-hdr" style="color:var(--text3);display:flex;justify-content:space-between">
+        <span>📦 No Expiration Date</span><span style="font-size:12px">${noD.length} item${noD.length!==1?"s":""}</span>
+      </div>${noD.sort((a,b)=>a.name.localeCompare(b.name)).map(irow).join("")}</div>`;
+  }
+  app.innerHTML=h;
+}
+
+/* ════════════════════════════════════════════
+   RENDER: SETTINGS
+════════════════════════════════════════════ */
+function renderCfg(app){
+  const c=getCfg()||{};
+  app.innerHTML=`<div class="scard"><div class="scard-hdr">⚙️ Firebase Configuration</div><div class="scard-body">
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6">Update credentials below. Changes take effect after saving.</p>
+    <div class="fg"><label>API Key</label><input id="s-ak" value="${esc(c.apiKey||"")}"></div>
+    <div class="fg"><label>Auth Domain</label><input id="s-ad" value="${esc(c.authDomain||"")}"></div>
+    <div class="fg"><label>Database URL</label><input id="s-du" value="${esc(c.databaseURL||"")}"></div>
+    <div class="fg"><label>Project ID</label><input id="s-pi" value="${esc(c.projectId||"")}"></div>
+    <div class="fg"><label>App ID</label><input id="s-ai" value="${esc(c.appId||"")}"></div>
+    <button class="btn p" style="width:100%;padding:12px;font-size:15px;margin-top:4px" onclick="saveCfgForm()">Save & Reconnect</button>
+    <div id="cfg-msg" style="margin-top:10px;font-size:13px;color:var(--green);text-align:center"></div>
+  </div></div>`;
+}
+
+/* ════════════════════════════════════════════
+   MODAL SYSTEM
+════════════════════════════════════════════ */
+function showModal(html, keepOpen=false){
+  modalOpen=true;
+  document.getElementById("mroot").innerHTML=
+    `<div class="mbg" onclick="${keepOpen?"":"if(event.target===this)closeModal()"}"><div class="modal">${html}</div></div>`;
+}
+
+function closeModal(){
+  modalOpen=false;
+  document.getElementById("mroot").innerHTML="";
+  render();
+}
+
+// Silent close: clears modal but does NOT call render() immediately.
+// Use before async writes so render() fires after all writes complete.
+function silentClose(){
+  modalOpen=false;
+  document.getElementById("mroot").innerHTML="";
+}
+
+/* ════════════════════════════════════════════
+   FORM VALUE HELPERS
+════════════════════════════════════════════ */
+const fv  = id => (document.getElementById(id)?.value||"").trim();
+const fvn = (id,def=0) => { const v=parseInt(fv(id)); return isNaN(v)?def:v; };
+const fvs = id => document.getElementById(id)?.value || "";
+
+/* ════════════════════════════════════════════
+   ADD ITEM
+════════════════════════════════════════════ */
+function openAdd(){
+  const loc = UI.tab>0 ? LOCS[UI.tab-1] : LOCS[0];
+  showModal(`<div class="mhandle"></div><h2>Add New Item</h2>
+    <div class="fg"><label>Item Name *</label><input id="f-name" autofocus placeholder="e.g. Hand Sanitizer 8oz"></div>
+    <div class="frow">
+      <div class="fg"><label>SKU / Barcode</label><input id="f-sku" placeholder="For scanning"></div>
+      <div class="fg"><label>Category</label><select id="f-cat">${CATS.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("")}</select></div>
+    </div>
+    <div class="fg"><label>Location *</label><select id="f-loc">${LOCS.map(l=>`<option value="${esc(l)}" ${l===loc?"selected":""}>${esc(l)}</option>`).join("")}</select></div>
+    <div class="frow">
+      <div class="fg"><label>Quantity *</label><input id="f-qty" type="number" min="0" value="0" inputmode="numeric"></div>
+      <div class="fg"><label>Low Alert (this location)</label><input id="f-lt" type="number" min="1" value="5" inputmode="numeric"></div>
+    </div>
+    <div class="fg"><label>Expiration Date</label><input id="f-exp" type="date"></div>
+    <div class="fg"><label>Notes</label><input id="f-notes" placeholder="Optional"></div>
+    <div class="macts">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn p" onclick="doAdd()">Add Item</button>
+    </div>`);
+}
+
+async function doAdd(){
+  const name=fv("f-name");
+  if(!name){alert("Item name is required.");return;}
+  const lt=fvn("f-lt",DEF_LOW);
+  const data={name,sku:fv("f-sku"),category:fvs("f-cat"),location:fvs("f-loc"),qty:fvn("f-qty"),locThresh:lt,grpThresh:lt,expDate:fv("f-exp"),notes:fv("f-notes")};
+  silentClose();
+  await fAdd(data);
+  render();
+}
+
+/* ════════════════════════════════════════════
+   EDIT ITEM (location tab — single record)
+════════════════════════════════════════════ */
+function openEdit(id){
+  const i=DB[id]; if(!i) return;
+  const lt = Number(i.locThresh)||Number(i.lowThreshold)||DEF_LOW;
+  showModal(`<div class="mhandle"></div><h2>Edit Item</h2>
+    <div class="fg"><label>Item Name *</label><input id="f-name" value="${esc(i.name)}" autofocus></div>
+    <div class="frow">
+      <div class="fg"><label>SKU / Barcode</label><input id="f-sku" value="${esc(i.sku||"")}"></div>
+      <div class="fg"><label>Category</label><select id="f-cat">${CATS.map(c=>`<option value="${esc(c)}" ${c===i.category?"selected":""}>${esc(c)}</option>`).join("")}</select></div>
+    </div>
+    <div class="fg"><label>Location *</label><select id="f-loc">${LOCS.map(l=>`<option value="${esc(l)}" ${l===i.location?"selected":""}>${esc(l)}</option>`).join("")}</select></div>
+    <div class="frow">
+      <div class="fg"><label>Quantity *</label><input id="f-qty" type="number" min="0" value="${i.qty||0}" inputmode="numeric"></div>
+      <div class="fg"><label>Low Alert (this location)</label><input id="f-lt" type="number" min="1" value="${lt}" inputmode="numeric"></div>
+    </div>
+    <div class="fg"><label>Expiration Date</label><input id="f-exp" type="date" value="${i.expDate||""}"></div>
+    <div class="fg"><label>Notes</label><input id="f-notes" value="${esc(i.notes||"")}"></div>
+    <div class="macts">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn p" onclick="doEdit('${id}')">Save Changes</button>
+    </div>`);
+}
+
+async function doEdit(id){
+  const name=fv("f-name");
+  if(!name){alert("Item name is required.");return;}
+  const lt=fvn("f-lt",DEF_LOW);
+  const grpT = Number(DB[id]?.grpThresh) || Number(DB[id]?.lowThreshold) || lt;
+  const data={name,sku:fv("f-sku"),category:fvs("f-cat"),location:fvs("f-loc"),qty:fvn("f-qty"),locThresh:lt,grpThresh:grpT,expDate:fv("f-exp"),notes:fv("f-notes")};
+  silentClose();
+  await fUpdate(id,data);
+  await fLog(`Updated "${name}"`);
+  // Update DB locally so render reflects changes immediately
+  if(DB[id]) DB[id] = { ...DB[id], ...data };
+  render();
+}
+
+/* ════════════════════════════════════════════
+   GROUP EDIT (All tab — shared fields + grpThresh)
+════════════════════════════════════════════ */
+function openGrpEdit(sid){
+  const ids = decIds(sid);
+  const grp = ids.map(id=>DB[id]).filter(Boolean).map(i=>({...i,
+    grpThresh: Number(i.grpThresh)||Number(i.lowThreshold)||DEF_LOW
+  }));
+  if(!grp.length) return;
+
+  const rep    = grp[0];
+  const total  = grp.reduce((s,i)=>s+(i.qty||0),0);
+  const locs   = [...new Set(grp.map(i=>i.location))];
+  const curGrp = grp.reduce((mx,i)=>Math.max(mx,i.grpThresh),0) || DEF_LOW;
+
+  showModal(`<div class="mhandle"></div><h2>✏️ Edit Item Group</h2>
+    <div style="background:var(--bg2);border-radius:var(--r);padding:12px;margin-bottom:16px">
+      <div style="font-size:13px;color:var(--text2)">Editing across <strong>${locs.length} location${locs.length!==1?"s":""}</strong> · <strong>${total} total units</strong></div>
+      <div style="font-size:12px;color:var(--text3);margin-top:4px">${locs.join(" · ")}</div>
+    </div>
+    <div class="fg"><label>Item Name *</label><input id="ge-name" value="${esc(rep.name)}" autofocus></div>
+    <div class="frow">
+      <div class="fg"><label>Category</label>
+        <select id="ge-cat">${CATS.map(c=>`<option value="${esc(c)}" ${c===rep.category?"selected":""}>${esc(c)}</option>`).join("")}</select>
+      </div>
+      <div class="fg"><label>SKU / Barcode</label><input id="ge-sku" value="${esc(rep.sku||"")}"></div>
+    </div>
+    <div class="fg">
+      <label>Low Stock Alert — Combined Total Across All Locations</label>
+      <input id="ge-gt" type="number" min="1" value="${curGrp}" inputmode="numeric">
+      <div style="font-size:12px;color:var(--text3);margin-top:5px">
+        Badge turns <strong style="color:var(--yellow)">Low Stock</strong> when the combined total across all locations drops to or below this number.
+        Current combined total: <strong>${total}</strong>.
+      </div>
+    </div>
+    <div class="macts">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn p" onclick="doGrpEdit('${sid}')">Save Changes</button>
+    </div>`);
+}
+
+async function doGrpEdit(sid){
+  // 1. Read ALL form values while the modal DOM still exists
+  const name     = fv("ge-name");
+  const category = fvs("ge-cat");
+  const sku      = fv("ge-sku");
+  const grpT     = Math.max(1, fvn("ge-gt", DEF_LOW));
+
+  if(!name){alert("Item name is required.");return;}
+
+  // 2. Silent close — unblock Firebase listener but do NOT render yet
+  silentClose();
+
+  // 3. Write to each record in the group
+  //    Only updates shared fields + grpThresh — location/qty/expDate/notes untouched
+  const ids = decIds(sid);
+  const grp = ids.map(id=>DB[id]).filter(Boolean);
+
+  for(const item of grp){
+    await fUpdate(item.id, {
+      name,
+      category,
+      sku,
+      grpThresh: grpT   // ← this is what allStatus() reads for All-tab badge
+    });
+  }
+
+  await fLog(`Updated group "${name}" — combined alert set to ${grpT}`);
+
+  // Update DB locally so render() immediately reflects the new grpThresh
+  // without waiting for onValue to fire
+  const ids2 = decIds(sid);
+  ids2.forEach(id => {
+    if(DB[id]){
+      DB[id] = { ...DB[id], name, category, sku, grpThresh: grpT };
+    }
+  });
+
+  render();
+}
+
+/* ════════════════════════════════════════════
+   DELETE
+════════════════════════════════════════════ */
+async function doDelOne(id){
+  const i=DB[id]; if(!i) return;
+  if(!confirm(`Delete "${i.name}" from ${i.location} (qty: ${i.qty})?\n\nThis cannot be undone.`)) return;
+  await fDelete(id);
+  await fLog(`Deleted "${i.name}" from ${i.location}`);
+}
+
+async function doDelGroup(sid){
+  const ids = decIds(sid);
+  const grp = ids.map(id=>DB[id]).filter(Boolean);
+  if(!grp.length) return;
+  const rep   = grp[0];
+  const total = grp.reduce((s,i)=>s+(i.qty||0),0);
+  const locs  = [...new Set(grp.map(i=>i.location))];
+  const lines = locs.map(l=>`  • ${l}: ${grp.filter(i=>i.location===l).reduce((s,i)=>s+(i.qty||0),0)} units`).join("\n");
+  const msg   = grp.length===1
+    ? `Delete "${rep.name}" from ${rep.location} (qty: ${total})?\n\nThis cannot be undone.`
+    : `Delete ALL records of "${rep.name}"?\n\n${lines}\n\nTotal: ${total} units. This cannot be undone.`;
+  if(!confirm(msg)) return;
+  for(const id of ids) await fDelete(id);
+  await fLog(`Deleted "${rep.name}" (${total} units across ${locs.join(", ")})`);
+}
+
+/* ════════════════════════════════════════════
+   DIRECT QTY ADJUST (+/− on single records)
+════════════════════════════════════════════ */
+async function doAdj(id, delta){
+  const i=DB[id]; if(!i) return;
+  const nq = Math.max(0,(i.qty||0)+delta);
+  await fSetQty(id,nq);
+  await fLog(`${delta>0?"Added":"Removed"} ${Math.abs(delta)} of "${i.name}" in ${i.location} → now ${nq}`);
+}
+
+/* ════════════════════════════════════════════
+   QTY ADJUST MODAL (multi-expiration groups)
+   Uses index-based IDs (qa-0, qa-1, …) — avoids Firebase ID hyphen issues.
+   Writes immediately on each tap; modal stays open because modalOpen=true.
+════════════════════════════════════════════ */
+let _qaRows = [];  // snapshot at modal-open time
+
+function openQtyAdj(sid){
+  const ids = decIds(sid);
+  const grp = ids.map(id=>DB[id]).filter(Boolean);
+  if(!grp.length) return;
+  const rep = grp[0];
+  const multiLoc = [...new Set(grp.map(i=>i.location))].length > 1;
+
+  _qaRows = grp.slice().sort((a,b)=>{
+    const lc=(a.location||"").localeCompare(b.location||"");
+    return lc!==0?lc:new Date(a.expDate||"9999")-new Date(b.expDate||"9999");
+  });
+
+  let rows="";
+  _qaRows.forEach((item,idx)=>{
+    const locLine = multiLoc
+      ? `<div style="color:var(--blue);font-weight:600;font-size:11px;text-transform:uppercase;margin-bottom:2px">${esc(item.location)}</div>`
+      : "";
+    rows+=`<div class="brow">
+      <div class="brow-info">
+        ${locLine}
+        <div class="brow-exp">${item.expDate?`Exp ${item.expDate}`:"No exp date"}</div>
+        <div class="brow-sub" id="qa-cur-${idx}">Current: ${item.qty||0}</div>
+      </div>
+      <div class="qc">
+        <button class="qb" onclick="qaStep(${idx},-1)">−</button>
+        <input id="qa-val-${idx}" type="number" min="0" value="${item.qty||0}" inputmode="numeric"
+          style="width:52px;padding:5px 4px;border:1px solid var(--border2);border-radius:var(--r);font-size:15px;background:var(--bg);color:var(--text);text-align:center"
+          oninput="qaInput(${idx},parseInt(this.value)||0)">
+        <button class="qb" onclick="qaStep(${idx},1)">+</button>
+      </div>
+    </div>`;
+  });
+
+  const subtitle = multiLoc
+    ? `${[...new Set(grp.map(i=>i.location))].length} locations · ${grp.reduce((s,i)=>s+(i.qty||0),0)} total`
+    : esc(rep.location);
+
+  showModal(`<div class="mhandle"></div><h2>± Adjust Quantities</h2>
+    <div style="background:var(--bg2);border-radius:var(--r);padding:12px;margin-bottom:16px">
+      <div style="font-weight:700;font-size:15px;margin-bottom:2px">${esc(rep.name)}</div>
+      <div style="font-size:13px;color:var(--text2)">${subtitle}</div>
+    </div>
+    ${rows}
+    <div class="macts"><button class="btn p" style="flex:1" onclick="closeModal()">Done</button></div>`);
+}
+
+function qaStep(idx, delta){
+  const inp = document.getElementById("qa-val-"+idx); if(!inp) return;
+  qaInput(idx, (parseInt(inp.value)||0)+delta);
+}
+
+async function qaInput(idx, newVal){
+  newVal = Math.max(0, isNaN(newVal)?0:newVal);
+  const inp = document.getElementById("qa-val-"+idx);
+  const lbl = document.getElementById("qa-cur-"+idx);
+  if(inp) inp.value = newVal;
+  if(lbl) lbl.textContent = "Current: "+newVal;
+  if(_qaRows[idx]) await fSetQty(_qaRows[idx].id, newVal);
+}
+
+/* ════════════════════════════════════════════
+   MOVE MODAL
+   Uses index-based IDs (mv-0, mv-1, …).
+   Snapshot captured at open time (_mvSnap).
+   All DOM reads happen BEFORE silentClose().
+════════════════════════════════════════════ */
+let _mvSnap = [];
+
+function openMove(sid){
+  const ids = decIds(sid);
+  const grp = ids.map(id=>DB[id]).filter(Boolean);
+  if(!grp.length) return;
+  const rep      = grp[0];
+  const total    = grp.reduce((s,i)=>s+(i.qty||0),0);
+  const multiLoc = [...new Set(grp.map(i=>i.location))].length > 1;
+
+  _mvSnap = grp.slice().sort((a,b)=>{
+    const lc=(a.location||"").localeCompare(b.location||"");
+    return lc!==0?lc:new Date(a.expDate||"9999")-new Date(b.expDate||"9999");
+  });
+
+  let rows="";
+  _mvSnap.forEach((item,idx)=>{
+    const locLine = multiLoc
+      ? `<div class="brow-loc">${esc(item.location)}</div>`
+      : "";
+    rows+=`<div class="brow">
+      <div class="brow-info">
+        ${locLine}
+        <div class="brow-exp">${item.expDate?`Exp ${item.expDate}`:"No exp date"}</div>
+        <div class="brow-sub">${item.qty||0} in stock</div>
+      </div>
+      <input id="mv-${idx}" type="number" min="0" max="${item.qty||0}" value="0"
+        inputmode="numeric" placeholder="0" oninput="mvTot()">
+    </div>`;
+  });
+
+  const destOpts = multiLoc
+    ? LOCS.map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join("")
+    : LOCS.filter(l=>l!==rep.location).map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join("");
+
+  const fromLabel = multiLoc
+    ? `${[...new Set(grp.map(i=>i.location))].length} locations · ${total} total in stock`
+    : `From: ${esc(rep.location)} · ${total} total in stock`;
+
+  showModal(`<div class="mhandle"></div><h2>🚚 Move Stock</h2>
+    <div style="background:var(--bg2);border-radius:var(--r);padding:12px;margin-bottom:16px">
+      <div style="font-weight:700;font-size:15px;margin-bottom:2px">${esc(rep.name)}</div>
+      <div style="font-size:13px;color:var(--text2)">${fromLabel}</div>
+    </div>
+    <div class="fg">
+      <label>Qty to move per batch (0 = skip)</label>
+      ${rows}
+      <div style="font-size:12px;color:var(--text3);margin-top:4px">Each batch keeps its expiration date at the destination.</div>
+    </div>
+    <div id="mv-tot" style="font-size:13px;font-weight:600;color:var(--blue);min-height:20px;margin-bottom:14px">Enter quantities above</div>
+    <div class="fg">
+      <label>Move To *</label>
+      <select id="mv-dest" style="width:100%;padding:11px 14px;border:1px solid var(--border2);border-radius:var(--r);font-size:16px;background:var(--bg2);color:var(--text)">
+        ${destOpts}
+      </select>
+    </div>
+    <div class="macts">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn p" onclick="doMove()">Move Stock</button>
+    </div>`);
+}
+
+function mvTot(){
+  let t=0;
+  _mvSnap.forEach((_,idx)=>{
+    const v=parseInt(document.getElementById("mv-"+idx)?.value||"0");
+    if(!isNaN(v)&&v>0) t+=v;
+  });
+  const el=document.getElementById("mv-tot");
+  if(el) el.textContent=t>0?`Moving ${t} unit${t!==1?"s":""} total`:"Enter quantities above";
+}
+
+async function doMove(){
+  const dest=document.getElementById("mv-dest")?.value;
+  if(!dest){alert("Please select a destination.");return;}
+
+  // Step 1: Read all values from DOM while modal still exists
+  const ops=[];
+  let total=0;
+  for(let idx=0;idx<_mvSnap.length;idx++){
+    const item=_mvSnap[idx];
+    const mq=parseInt(document.getElementById("mv-"+idx)?.value||"0");
+    if(isNaN(mq)||mq<=0) continue;
+    if(mq>item.qty){
+      alert(`Cannot move ${mq} of "${item.name}" (${item.expDate||"no exp"}, ${item.location}) — only ${item.qty||0} available.`);
+      return;
+    }
+    ops.push({item,mq});
+    total+=mq;
+  }
+  if(!total){alert("Enter at least one quantity greater than 0.");return;}
+
+  // Step 2: Silent close before writes
+  silentClose();
+
+  // Step 3: Pre-capture destination records to avoid mid-flight read issues
+  const destCache={};
+  const snap=allItems();
+  for(const {item} of ops){
+    const ck=item.expDate+"||"+dest;
+    if(!(ck in destCache)){
+      const ex=snap.find(r=>r.id!==item.id&&r.name.toLowerCase().trim()===item.name.toLowerCase().trim()&&r.location===dest&&(r.expDate||"")===(item.expDate||""));
+      destCache[ck]=ex?{id:ex.id,qty:ex.qty||0}:null;
+    }
+  }
+
+  // Step 4: Write
+  for(const {item,mq} of ops){
+    // Find live source record right now
+    const liveSrc=allItems().find(r=>r.name.toLowerCase().trim()===item.name.toLowerCase().trim()&&r.location===item.location&&(r.expDate||"")===(item.expDate||""))||item;
+    const newSrc=(liveSrc.qty||0)-mq;
+    if(newSrc<=0){
+      await fDelete(liveSrc.id);
+    } else {
+      await fSetQty(liveSrc.id,newSrc);
+    }
+    const ck=item.expDate+"||"+dest;
+    if(destCache[ck]){
+      const {id,qty}=destCache[ck];
+      await fSetQty(id,qty+mq);
+      destCache[ck].qty=qty+mq;
+    } else {
+      await set(push(ref(db,"items")), clean({
+        name:item.name,sku:item.sku||"",category:item.category||CATS[7],
+        location:dest,qty:mq,locThresh:item.locThresh||DEF_LOW,
+        grpThresh:item.grpThresh||DEF_LOW,expDate:item.expDate||"",notes:item.notes||""
+      }));
+    }
+  }
+  const fromLocs=[...new Set(_mvSnap.map(i=>i.location))].join(", ");
+  await fLog(`Moved ${total} of "${_mvSnap[0].name}" from ${fromLocs} → ${dest}`);
+  render();
+}
+
+/* ════════════════════════════════════════════
+   SCAN
+════════════════════════════════════════════ */
+function openScan(){
+  showModal(`<div class="mhandle"></div><h2>📷 Scan Item In</h2>
+    <div class="scan-zone" onclick="document.getElementById('sc-in').focus()">
+      <div style="font-size:28px;margin-bottom:8px">📷</div>
+      Tap here then scan a barcode or type a SKU
+    </div>
+    <input id="sc-in" placeholder="Scan or type SKU + Enter"
+      style="width:100%;padding:12px 14px;border:1px solid var(--border2);border-radius:var(--r);font-size:16px;background:var(--bg2);color:var(--text);margin-bottom:10px"
+      onkeydown="if(event.key==='Enter'){doScan(this.value.trim());this.value='';}"
+      autocomplete="off" inputmode="text">
+    <div id="sc-res" class="scan-res">Waiting for scan…</div>
+    <div style="margin-top:10px;font-size:12px;color:var(--text3)">Each scan adds 1 unit to the matching item.</div>
+    <div class="macts"><button class="btn p" style="flex:1" onclick="closeModal()">Done</button></div>`,true);
+  setTimeout(()=>document.getElementById("sc-in")?.focus(),100);
+}
+
+async function doScan(sku){
+  if(!sku) return;
+  const found=allItems().find(i=>i.sku&&i.sku.toLowerCase()===sku.toLowerCase());
+  const el=document.getElementById("sc-res");
+  if(found){
+    await fSetQty(found.id,(found.qty||0)+1);
+    await fLog(`Scanned "${found.name}" in ${found.location} → now ${(found.qty||0)+1}`);
+    if(el){el.textContent=`✓ ${found.name} — added 1 unit`;el.className="scan-res ok";}
+  } else {
+    if(el){el.textContent=`No item with SKU "${sku}". Add it manually first.`;el.className="scan-res no";}
+  }
+}
+
+/* ════════════════════════════════════════════
+   SETTINGS FORM
+════════════════════════════════════════════ */
+function saveCfgForm(){
+  const c={apiKey:fv("s-ak"),authDomain:fv("s-ad"),databaseURL:fv("s-du"),projectId:fv("s-pi"),appId:fv("s-ai")};
+  saveCfg(c);
+  const m=document.getElementById("cfg-msg"); if(m) m.textContent="Saved! Reloading…";
+  setTimeout(()=>location.reload(),1200);
+}
+
+/* ════════════════════════════════════════════
+   SETUP SCREEN (first-time Firebase config)
+════════════════════════════════════════════ */
+function showSetup(){
+  document.getElementById("app").innerHTML=`<div class="setup-wrap"><div class="setup-card">
+    <div style="font-size:40px;margin-bottom:12px;text-align:center">🔗</div>
+    <h2>Connect to Firebase</h2>
+    <p>Paste your Firebase project values below. You only need to do this once per device.</p>
+    <div class="fg"><label>API Key</label><input id="su-ak" placeholder="AIzaSy…"></div>
+    <div class="fg"><label>Auth Domain</label><input id="su-ad" placeholder="project.firebaseapp.com"></div>
+    <div class="fg"><label>Database URL</label><input id="su-du" placeholder="https://project-default-rtdb.firebaseio.com"></div>
+    <div class="fg"><label>Project ID</label><input id="su-pi" placeholder="your-project-id"></div>
+    <div class="fg"><label>App ID</label><input id="su-ai" placeholder="1:123456789:web:abc…"></div>
+    <button class="btn p" style="width:100%;padding:12px;font-size:15px;margin-top:4px" onclick="doSetup()">Connect & Start</button>
+    <div id="su-err" class="setup-err"></div>
+  </div></div>`;
+}
+
+function doSetup(){
+  const c={apiKey:fv("su-ak"),authDomain:fv("su-ad"),databaseURL:fv("su-du"),projectId:fv("su-pi"),appId:fv("su-ai")};
+  if(!c.apiKey||!c.databaseURL||!c.projectId){
+    document.getElementById("su-err").textContent="Please fill in all required fields.";
+    return;
+  }
+  saveCfg(c);
+  location.reload();
+}
+
+/* ════════════════════════════════════════════
+   EXPOSE FUNCTIONS TO HTML onclick=
+════════════════════════════════════════════ */
+Object.assign(window,{
+  // Navigation
+  UI, V, render, closeModal,
+  // Inventory actions
+  openAdd, openEdit, openGrpEdit, openScan, openMove, openQtyAdj,
+  // Async submit handlers
+  doAdd, doEdit, doGrpEdit, doMove, doScan,
+  // Delete
+  doDelOne, doDelGroup,
+  // Qty adjust
+  doAdj, qaStep, qaInput,
+  // Move total display
+  mvTot,
+  // Settings / setup
+  saveCfgForm, doSetup
+});
+
+/* ════════════════════════════════════════════
+   BOOT
+════════════════════════════════════════════ */
+const cfg = getCfg();
+if(cfg && cfg.apiKey && cfg.databaseURL){
+  initFB(cfg);
+  V("inv");
+} else {
+  showSetup();
+}
+</script>
+</body>
+</html>
