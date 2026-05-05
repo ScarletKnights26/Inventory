@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Inventory Manager</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#fff;--bg2:#f5f5f3;--bg3:#eeede8;
+  --text:#1a1a1a;--text2:#666;--text3:#999;
+  --border:#e0dfd8;--border2:#ccc;
+  --blue-bg:#e8f0fb;--blue:#1a56a0;--blue-bdr:#b5d4f4;
+  --green-bg:#eaf3de;--green:#3b6d11;
+  --yellow-bg:#faeeda;--yellow:#854f0b;
+  --red-bg:#fcebeb;--red:#a32d2d;
+  --r:8px;--rl:12px;--th:56px;--bnh:60px;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#1e1e1c;--bg2:#2a2a28;--bg3:#2f2f2c;
+  --text:#f0efea;--text2:#aaa;--text3:#666;
+  --border:#3a3a36;--border2:#4a4a46;
+  --blue-bg:#0c2040;--blue:#7ab8f5;--blue-bdr:#185fa5;
+  --green-bg:#0d2005;--green:#8bcf4a;
+  --yellow-bg:#1f1200;--yellow:#f5c775;
+  --red-bg:#200a0a;--red:#f09595;
+}}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg3);color:var(--text);font-size:14px}
+
+/* topbar */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:100;height:var(--th);background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 16px;gap:10px}
+.t-title{font-size:17px;font-weight:700}
+.t-right{display:flex;align-items:center;gap:6px}
+.sync-pill{display:flex;align-items:center;gap:5px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-size:12px;color:var(--text2)}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:#ccc;transition:background .3s}
+.sync-dot.live{background:#4caf50}.sync-dot.err{background:#e53935}
+.dnav{display:flex;gap:4px}
+.dnav button{padding:6px 12px;border-radius:var(--r);font-size:13px;cursor:pointer;background:transparent;border:1px solid transparent;color:var(--text2);transition:all .15s}
+.dnav button:hover{background:var(--bg2)}
+.dnav button.on{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-bdr);font-weight:600}
+
+/* bottom nav */
+.bnav{position:fixed;bottom:0;left:0;right:0;z-index:100;height:var(--bnh);background:var(--bg);border-top:1px solid var(--border);display:none;align-items:stretch}
+.bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:none;background:transparent;cursor:pointer;color:var(--text2);font-size:10px;padding:6px 2px}
+.bnav-btn .ni{font-size:20px;line-height:1}
+.bnav-btn.on{color:var(--blue)}
+
+/* main */
+.body{padding-top:calc(var(--th) + 16px);padding-bottom:24px;min-height:100vh}
+.wrap{max-width:1200px;margin:0 auto;padding:0 16px}
+
+/* tabs */
+.tabs-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:14px}
+.tabs-wrap::-webkit-scrollbar{height:0}
+.tabs{display:flex;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);padding:7px;width:max-content;min-width:100%}
+.tab{padding:6px 14px;border:1px solid transparent;border-radius:var(--r);font-size:12px;cursor:pointer;background:transparent;color:var(--text2);white-space:nowrap;transition:all .15s}
+.tab:hover{background:var(--bg2)}
+.tab.on{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-bdr);font-weight:600}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.sc{background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);padding:12px 14px}
+.sc-label{font-size:10px;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.sc-val{font-size:24px;font-weight:700;color:var(--text)}
+.sc-val.y{color:var(--yellow)}.sc-val.r{color:var(--red)}
+
+/* card */
+.card{background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:14px}
+.toolbar{padding:10px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+.si{flex:1;min-width:120px;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--r);font-size:14px;background:var(--bg2);color:var(--text)}
+.si:focus{outline:none;border-color:var(--blue-bdr)}
+.fs{padding:8px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg2);color:var(--text);cursor:pointer}
+.fs:focus{outline:none;border-color:var(--blue-bdr)}
+
+/* buttons */
+.btn{padding:8px 16px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;cursor:pointer;background:var(--bg);color:var(--text);transition:all .15s;white-space:nowrap;font-weight:500}
+.btn:hover{background:var(--bg2)}
+.btn:active{transform:scale(.97)}
+.btn.p{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-bdr)}
+.btn.p:hover{opacity:.9}
+.btn.sm{padding:5px 10px;font-size:12px}
+.btn.ic{padding:7px 9px;font-size:15px}
+.btn.danger{background:var(--red-bg);color:var(--red);border-color:var(--red)}
+
+/* table */
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--bg2);padding:10px 14px;text-align:left;font-weight:600;font-size:11px;color:var(--text2);border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg2)}
+.qc{display:flex;align-items:center;gap:4px}
+.qb{width:28px;height:28px;border:1px solid var(--border2);border-radius:6px;background:var(--bg2);color:var(--text);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .1s}
+.qb:hover{background:var(--bg3)}
+.qb:active{transform:scale(.88)}
+.qn{min-width:28px;text-align:center;font-weight:600}
+.ab{background:none;border:none;cursor:pointer;padding:5px 7px;border-radius:6px;font-size:14px;opacity:.6;transition:all .15s}
+.ab:hover{opacity:1;background:var(--bg2)}
+
+/* badges */
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.badge.ok{background:var(--green-bg);color:var(--green)}
+.badge.low{background:var(--yellow-bg);color:var(--yellow)}
+.badge.out{background:var(--red-bg);color:var(--red)}
+.badge.exp{background:var(--red-bg);color:var(--red)}
+
+/* mobile cards */
+.mcards{display:none;padding:8px}
+.mcard{background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);padding:14px;margin-bottom:10px}
+.mcard-hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px}
+.mcard-name{font-size:15px;font-weight:600;flex:1}
+.mcard-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.mf{font-size:12px}
+.mf-l{color:var(--text3);display:block;margin-bottom:1px}
+.mf-v{color:var(--text2);font-weight:500}
+.mcard-foot{display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border)}
+.mcard-acts{display:flex;gap:6px}
+
+/* empty */
+.empty{text-align:center;padding:40px 20px;color:var(--text2)}
+.empty-icon{font-size:36px;margin-bottom:10px}
+
+/* modal */
+.mbg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:300;padding:0}
+.modal{background:var(--bg);border-radius:20px 20px 0 0;border:1px solid var(--border);padding:24px 20px 36px;width:100%;max-height:92vh;overflow-y:auto}
+.mhandle{width:40px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 18px}
+.modal h2{font-size:18px;font-weight:700;margin-bottom:18px}
+.fg{margin-bottom:14px}
+.fg label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.fg input,.fg select,.fg textarea{width:100%;padding:11px 14px;border:1px solid var(--border2);border-radius:var(--r);font-size:16px;background:var(--bg2);color:var(--text);-webkit-appearance:none}
+.fg input:focus,.fg select:focus{outline:none;border-color:var(--blue-bdr)}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.macts{display:flex;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+.macts .btn{flex:1;padding:12px;font-size:15px;text-align:center}
+
+/* scan */
+.scan-area{border:2px dashed var(--border2);border-radius:var(--rl);padding:28px 16px;text-align:center;color:var(--text2);font-size:14px;margin-bottom:14px;cursor:pointer;transition:border-color .15s}
+.scan-area:hover{border-color:var(--blue-bdr);color:var(--blue)}
+.scan-result{margin-top:10px;padding:12px 14px;border-radius:var(--r);font-size:13px;min-height:40px;background:var(--bg2);color:var(--text2)}
+.scan-result.found{background:var(--green-bg);color:var(--green)}
+.scan-result.notfound{background:var(--red-bg);color:var(--red)}
+
+/* activity */
+.ai{padding:13px 16px;border-bottom:1px solid var(--border)}
+.ai:last-child{border-bottom:none}
+.ai-msg{font-size:13px;color:var(--text);line-height:1.4}
+.ai-time{font-size:11px;color:var(--text3);margin-top:3px}
+
+/* alerts */
+.as{margin-bottom:12px}
+.as-hdr{padding:12px 16px;border-bottom:1px solid var(--border);font-weight:700;font-size:14px}
+.ali{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ali:last-child{border-bottom:none}
+.ali-info{flex:1;min-width:0}
+.ali-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ali-sub{font-size:12px;color:var(--text2);margin-top:2px}
+
+/* setup */
+.setup-wrap{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - var(--th));padding:20px}
+.setup-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);padding:28px 24px;width:100%;max-width:480px}
+.setup-card h2{font-size:20px;font-weight:700;margin-bottom:10px;text-align:center}
+.setup-card p{color:var(--text2);font-size:14px;margin-bottom:20px;line-height:1.6;text-align:center}
+.setup-err{color:var(--red);font-size:13px;margin-top:10px;min-height:20px;text-align:center}
+
+/* settings */
+.scard{background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;max-width:560px}
+.scard-hdr{padding:14px 18px;border-bottom:1px solid var(--border);font-weight:700;font-size:15px}
+.scard-body{padding:18px}
+
+/* spinner */
+.spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* FAB */
+.fab{display:none;position:fixed;right:18px;bottom:calc(var(--bnh) + 14px);z-index:99;width:54px;height:54px;border-radius:50%;background:var(--blue);color:#fff;border:none;font-size:28px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.25);align-items:center;justify-content:center}
+.fab:active{transform:scale(.92)}
+
+/* move batch row */
+.mbatch{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:10px 12px;background:var(--bg2);border-radius:var(--r)}
+.mbatch-info{flex:1;font-size:13px}
+.mbatch-loc{color:var(--blue);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.3px;margin-bottom:2px}
+.mbatch-exp{color:var(--text);font-weight:600}
+.mbatch-stock{color:var(--text3);font-size:12px}
+.mbatch input{width:72px;padding:8px 6px;border:1px solid var(--border2);border-radius:var(--r);font-size:15px;background:var(--bg);color:var(--text);text-align:center}
+.mbatch input:focus{outline:none;border-color:var(--blue-bdr)}
+
+/* qty adjust row */
+.qbatch{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:10px 12px;background:var(--bg2);border-radius:var(--r)}
+.qbatch-info{flex:1}
+.qbatch-loc{color:var(--blue);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.3px;margin-bottom:2px}
+.qbatch-exp{font-size:13px;font-weight:600;color:var(--text)}
+.qbatch-cur{font-size:12px;color:var(--text3)}
+
+/* exp calendar */
+.ecal-card{border-left:4px solid var(--border);margin-bottom:12px}
+
+@media(max-width:700px){
+  :root{--bnh:62px}
+  .body{padding-bottom:calc(var(--bnh) + 16px)}
+  .dnav{display:none}
+  .bnav{display:flex}
+  .fab{display:flex}
+  .tw table{display:none}
+  .mcards{display:block}
+  .stats{grid-template-columns:1fr 1fr}
+  .sc-val{font-size:22px}
+  .toolbar{flex-direction:column;align-items:stretch}
+  .si{min-width:unset}
+  .donly{display:none}
+  .modal-bg{align-items:flex-end}
+  .modal{max-height:88vh}
+  .frow{grid-template-columns:1fr}
+  .wrap{padding:0 10px}
+  .tabs{gap:4px;padding:6px}
+  .tab{padding:5px 10px;font-size:11px}
+}
+@media(min-width:701px){
+  .mcards{display:none}
+  .tw table{display:table}
+  .bnav{display:none}
+  .fab{display:none}
+  .mbg{align-items:center;padding:20px}
+  .modal{border-radius:var(--rl);width:500px;max-width:100%}
+  .mhandle{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="t-title">📦 Inventory</div>
+  <div class="t-right">
+    <div class="sync-pill"><span class="sync-dot" id="sdot"></span><span id="slabel">Connecting…</span></div>
+    <div class="dnav">
+      <button id="nav-inv" onclick="V('inv')">Inventory</button>
+      <button id="nav-act" onclick="V('act')">Activity</button>
+      <button id="nav-alr" onclick="V('alr')">⚠️ Alerts</button>
+      <button id="nav-exp" onclick="V('exp')">🗓️ Expiration</button>
+      <button id="nav-cfg" onclick="V('cfg')">⚙️</button>
+    </div>
+  </div>
+</div>
+
+<div class="body"><div class="wrap" id="app">
+  <div style="text-align:center;padding:60px 20px;color:var(--text2)"><div class="spinner"></div>Loading…</div>
+</div></div>
+
+<div class="bnav" id="bnav">
+  <button class="bnav-btn" id="bnav-inv" onclick="V('inv')"><span class="ni">📦</span>Inventory</button>
+  <button class="bnav-btn" id="bnav-act" onclick="V('act')"><span class="ni">📋</span>Activity</button>
+  <button class="bnav-btn" id="bnav-alr" onclick="V('alr')"><span class="ni">⚠️</span>Alerts</button>
+  <button class="bnav-btn" id="bnav-exp" onclick="V('exp')"><span class="ni">🗓️</span>Expiry</button>
+  <button class="bnav-btn" id="bnav-cfg" onclick="V('cfg')"><span class="ni">⚙️</span>Settings</button>
+</div>
+
+<button class="fab" id="fab" onclick="openAdd()">+</button>
+<div id="modal-root"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, push, onValue, remove, update }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+/* ─────────────────────────────────────────────
+   CONSTANTS
+───────────────────────────────────────────── */
+const LOCS = [
+  "APC Storage","APC Weight Room","APC Loading Dock",
+  "JMA Rowing Side","JMA Weight Room Side",
+  "Rodkin Cabinets","Rodkin Loading Dock","Rodkin Storage Pod"
+];
+const CATS = ["Cleaning Supplies","Equipment","Medical/First Aid","Food & Beverage",
+              "PPE","Office Supplies","Maintenance","Other"];
+const LOW_DEFAULT = 5;
+const CFG_KEY = "inv_fb_cfg";
+
+/* ─────────────────────────────────────────────
+   STATE  (plain object — never mutated from inside Firebase callbacks)
+───────────────────────────────────────────── */
+let db = null;
+let DB = {};          // live Firebase items snapshot: { id: {...item} }
+let ACTIVITY = [];    // sorted activity log
+let modalOpen = false;// blocks re-render while modal is open
+
+const UI = {
+  view: "inv",
+  tab: 0,             // 0 = All, 1..8 = location index
+  filterStatus: "all",
+  filterCat: "all",
+  search: ""
+};
+
+/* ─────────────────────────────────────────────
+   CONFIG
+───────────────────────────────────────────── */
+function getCfg(){ try{ return JSON.parse(localStorage.getItem(CFG_KEY)); }catch(e){ return null; } }
+function saveCfg(c){ localStorage.setItem(CFG_KEY, JSON.stringify(c)); }
+
+/* ─────────────────────────────────────────────
+   FIREBASE INIT + LISTENERS
+───────────────────────────────────────────── */
+function initFB(cfg){
+  try{
+    const app = initializeApp(cfg);
+    db = getDatabase(app);
+    onValue(ref(db,"items"), snap=>{
+      DB = snap.val() || {};
+      dot(true);
+      if(!modalOpen) render();
+    }, e=>{ dot(false); console.error(e); });
+    onValue(ref(db,"activity"), snap=>{
+      const raw = snap.val() || {};
+      ACTIVITY = Object.values(raw).sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,200);
+      if(UI.view==="act" && !modalOpen) render();
+    });
+  }catch(e){ console.error(e); }
+}
+
+function dot(live){
+  const d=document.getElementById("sdot"), l=document.getElementById("slabel");
+  if(d) d.className="sync-dot "+(live?"live":"err");
+  if(l) l.textContent=live?"Live":"Offline";
+}
+
+/* ─────────────────────────────────────────────
+   DB HELPERS — every write goes through these
+───────────────────────────────────────────── */
+
+// Set a single item's qty.  Safe to call repeatedly — no cascades.
+async function setQty(id, newQty){
+  newQty = Math.max(0, newQty);
+  await update(ref(db,`items/${id}`), { qty: newQty });
+}
+
+// Adjust qty by delta (+1 / -1 etc.)
+async function adjustQty(id, delta){
+  const item = DB[id]; if(!item) return;
+  await setQty(id, (item.qty||0) + delta);
+  log(`${delta>0?"Added":"Removed"} ${Math.abs(delta)} of "${item.name}" in ${item.location} → now ${Math.max(0,(item.qty||0)+delta)}`);
+}
+
+async function addItem(data){
+  const r = push(ref(db,"items"));
+  await set(r, { ...data, createdAt: Date.now() });
+  log(`Added "${data.name}" → ${data.location} (qty: ${data.qty})`);
+}
+
+async function saveItem(id, data){
+  await update(ref(db,`items/${id}`), data);
+  log(`Updated "${data.name}" in ${data.location} (qty: ${data.qty})`);
+}
+
+async function deleteRecord(id){
+  const item = DB[id]; if(!item) return;
+  await remove(ref(db,`items/${id}`));
+  log(`Deleted "${item.name}" from ${item.location}`);
+}
+
+async function log(msg){
+  await set(push(ref(db,"activity")), { msg, ts: Date.now(), time: new Date().toLocaleString() });
+}
+
+/* ─────────────────────────────────────────────
+   DATA HELPERS
+───────────────────────────────────────────── */
+const esc = s => (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const daysTo = d => d ? Math.ceil((new Date(d)-new Date())/86400000) : null;
+const itemsArr = () => Object.entries(DB).map(([id,v])=>({...v,id}));
+
+// Status for a single record (used for expiry display only)
+function recordStatus(item){
+  if(item.qty===0) return "out";
+  if(item.expDate && new Date(item.expDate)<new Date()) return "exp";
+  if(item.qty<=(item.lowThreshold||LOW_DEFAULT)) return "low";
+  return "ok";
+}
+
+// Status for a visual group (same name+location), uses combined qty for low/out
+function groupStatus(group){
+  const total = group.reduce((s,i)=>s+(i.qty||0),0);
+  if(total===0) return "out";
+  if(group.some(i=>i.expDate && new Date(i.expDate)<new Date())) return "exp";
+  if(total<=(group[0].lowThreshold||LOW_DEFAULT)) return "low";
+  return "ok";
+}
+
+const statusLabel = s => ({ok:"In Stock",low:"Low Stock",out:"Out of Stock",exp:"Expired"}[s]||s);
+
+// Group array of items by name+location
+function groupByNameLoc(arr){
+  const map = {};
+  arr.forEach(i=>{
+    const k = (i.name||"").toLowerCase().trim()+"||"+(i.location||"");
+    (map[k]=map[k]||[]).push(i);
+  });
+  return Object.values(map).sort((a,b)=>(a[0].name||"").localeCompare(b[0].name||""));
+}
+
+// Group array of items by name only (for All tab)
+function groupByName(arr){
+  const map = {};
+  arr.forEach(i=>{
+    const k = (i.name||"").toLowerCase().trim();
+    (map[k]=map[k]||[]).push(i);
+  });
+  return Object.values(map).sort((a,b)=>(a[0].name||"").localeCompare(b[0].name||""));
+}
+
+// Combined qty map: name+location -> total qty (for grouped low-stock logic)
+function qtyMap(arr){
+  const m = {};
+  arr.forEach(i=>{
+    const k=(i.name||"").toLowerCase().trim()+"||"+(i.location||"");
+    m[k]=(m[k]||0)+(i.qty||0);
+  });
+  return m;
+}
+
+// Items passing current filters
+function filtered(){
+  let arr = itemsArr();
+  if(UI.tab>0) arr = arr.filter(i=>i.location===LOCS[UI.tab-1]);
+  if(UI.filterStatus!=="all"){
+    const qm = qtyMap(arr);
+    arr = arr.filter(i=>{
+      const k=(i.name||"").toLowerCase().trim()+"||"+(i.location||"");
+      const gqty = qm[k]??i.qty;
+      if(UI.filterStatus==="out") return gqty===0;
+      if(UI.filterStatus==="exp") return !!(i.expDate && new Date(i.expDate)<new Date());
+      if(UI.filterStatus==="low"){
+        const thresh=i.lowThreshold||LOW_DEFAULT;
+        return gqty>0 && gqty<=thresh && !(i.expDate && new Date(i.expDate)<new Date());
+      }
+      if(UI.filterStatus==="ok"){
+        const thresh=i.lowThreshold||LOW_DEFAULT;
+        return gqty>thresh && !(i.expDate && new Date(i.expDate)<new Date());
+      }
+      return true;
+    });
+  }
+  if(UI.filterCat!=="all") arr=arr.filter(i=>i.category===UI.filterCat);
+  if(UI.search){
+    const q=UI.search.toLowerCase();
+    arr=arr.filter(i=>(i.name||"").toLowerCase().includes(q)||(i.sku||"").toLowerCase().includes(q)||(i.notes||"").toLowerCase().includes(q));
+  }
+  return arr.sort((a,b)=>(a.name||"").localeCompare(b.name||""));
+}
+
+// Stats for a set of items — uses grouped logic
+function calcStats(arr){
+  const groups = groupByNameLoc(arr);
+  let low=0,out=0;
+  const expSet=new Set();
+  groups.forEach(g=>{
+    const total=g.reduce((s,i)=>s+(i.qty||0),0);
+    const thresh=g[0].lowThreshold||LOW_DEFAULT;
+    if(total===0) out++;
+    else if(total<=thresh && !g.some(i=>i.expDate&&new Date(i.expDate)<new Date())) low++;
+    g.forEach(i=>{ const d=daysTo(i.expDate); if(d!==null&&d>0&&d<=30) expSet.add((i.name||"").toLowerCase()+"||"+(i.location||"")); });
+  });
+  return { total: groups.length, low, out, expiring: expSet.size };
+}
+
+// Expiration summary HTML for a group of items sharing name+location
+function expHtml(group){
+  const sorted = group.filter(i=>i.expDate).sort((a,b)=>new Date(a.expDate)-new Date(b.expDate));
+  const noDate = group.filter(i=>!i.expDate);
+  const parts = sorted.map(i=>{
+    const d=daysTo(i.expDate);
+    const warn=d!==null&&d<=30;
+    return `<span style="${warn?"color:var(--red);font-weight:600":""}">${i.qty}×&nbsp;${i.expDate}${warn?" ⚠️":""}</span>`;
+  });
+  if(noDate.length) parts.push(`<span style="color:var(--text3)">${noDate.reduce((s,i)=>s+(i.qty||0),0)}×&nbsp;no date</span>`);
+  return parts.join('<span style="color:var(--text3)"> · </span>') || "—";
+}
+
+// Location breakdown HTML for All-tab cross-location groups
+function locBreakdown(allGroup){
+  const m={};
+  allGroup.forEach(i=>{ (m[i.location]=m[i.location]||[]).push(i); });
+  return Object.entries(m).sort((a,b)=>a[0].localeCompare(b[0])).map(([loc,items])=>{
+    const qty=items.reduce((s,i)=>s+(i.qty||0),0);
+    return `<div style="margin-bottom:4px"><span style="font-weight:600">${qty}×</span> <span style="color:var(--text2)">${esc(loc)}</span> <span style="color:var(--text3);font-size:11px">${expHtml(items)}</span></div>`;
+  }).join("");
+}
+
+/* ─────────────────────────────────────────────
+   ROUTING
+───────────────────────────────────────────── */
+function V(view){
+  UI.view = view;
+  ["inv","act","alr","exp","cfg"].forEach(v=>{
+    document.getElementById("nav-"+v)?.classList.toggle("on", v===view);
+    document.getElementById("bnav-"+v)?.classList.toggle("on", v===view);
+  });
+  const fab=document.getElementById("fab");
+  if(fab) fab.style.display = view==="inv" ? "flex" : "none";
+  render();
+}
+
+function render(){
+  const app=document.getElementById("app"); if(!app) return;
+  if(UI.view==="inv")  renderInv(app);
+  else if(UI.view==="act")  renderAct(app);
+  else if(UI.view==="alr")  renderAlr(app);
+  else if(UI.view==="exp")  renderExp(app);
+  else if(UI.view==="cfg")  renderCfg(app);
+}
+
+/* ─────────────────────────────────────────────
+   TOOLBAR HTML (shared between All and location tabs)
+───────────────────────────────────────────── */
+function toolbarHtml(showScan=true){
+  return `
+  <div class="toolbar">
+    <input class="si" type="text" placeholder="🔍 Search name, SKU, notes…" value="${esc(UI.search)}" oninput="UI.search=this.value;render()">
+    <div style="display:flex;gap:6px;width:100%;flex-wrap:wrap">
+      <select class="fs" style="flex:1" onchange="UI.filterStatus=this.value;render()">
+        <option value="all" ${UI.filterStatus==="all"?"selected":""}>All Status</option>
+        <option value="ok"  ${UI.filterStatus==="ok" ?"selected":""}>In Stock</option>
+        <option value="low" ${UI.filterStatus==="low"?"selected":""}>Low Stock</option>
+        <option value="out" ${UI.filterStatus==="out"?"selected":""}>Out of Stock</option>
+        <option value="exp" ${UI.filterStatus==="exp"?"selected":""}>Expired</option>
+      </select>
+      <select class="fs" style="flex:1" onchange="UI.filterCat=this.value;render()">
+        <option value="all">All Categories</option>
+        ${CATS.map(c=>`<option value="${esc(c)}" ${UI.filterCat===c?"selected":""}>${esc(c)}</option>`).join("")}
+      </select>
+      ${showScan?`<button class="btn donly" onclick="openScan()">📷 Scan</button>`:""}
+      <button class="btn p donly" onclick="openAdd()">+ Add</button>
+    </div>
+  </div>`;
+}
+
+/* ─────────────────────────────────────────────
+   RENDER: INVENTORY
+───────────────────────────────────────────── */
+function renderInv(app){
+  const scope = UI.tab===0 ? itemsArr() : itemsArr().filter(i=>i.location===LOCS[UI.tab-1]);
+  const s = calcStats(scope);
+  const arr = filtered();
+
+  const tabsHtml = `<div class="tabs-wrap"><div class="tabs">
+    <button class="tab ${UI.tab===0?"on":""}" onclick="UI.tab=0;render()">All</button>
+    ${LOCS.map((l,i)=>`<button class="tab ${UI.tab===i+1?"on":""}" onclick="UI.tab=${i+1};render()">${l}</button>`).join("")}
+  </div></div>`;
+
+  const statsHtml = `<div class="stats">
+    <div class="sc"><div class="sc-label">${UI.tab===0?"Unique Items":"Line Items"}</div><div class="sc-val">${s.total}</div></div>
+    <div class="sc"><div class="sc-label">Low Stock</div><div class="sc-val ${s.low>0?"y":""}">${s.low}</div></div>
+    <div class="sc"><div class="sc-label">Out of Stock</div><div class="sc-val ${s.out>0?"r":""}">${s.out}</div></div>
+    <div class="sc"><div class="sc-label">Expiring (30d)</div><div class="sc-val ${s.expiring>0?"y":""}">${s.expiring}</div></div>
+  </div>`;
+
+  // ── ALL TAB ──
+  if(UI.tab===0){
+    const groups = groupByName(arr);
+    let trows="", cards="";
+    const empty = `<div class="empty"><div class="empty-icon">📭</div>${arr.length===0&&!UI.search&&UI.filterStatus==="all"&&UI.filterCat==="all"?"No items yet — tap + to add one.":"No items match your filters."}</div>`;
+
+    if(groups.length===0){ trows=`<tr><td colspan="7">${empty}</td></tr>`; cards=empty; }
+    else {
+      groups.forEach(g=>{
+        const rep=g[0];
+        const total=g.reduce((s,i)=>s+(i.qty||0),0);
+        const st=groupStatus(g);
+        const sid=encodeURIComponent(g.map(i=>i.id).join(","));
+        const locs=[...new Set(g.map(i=>i.location))].length;
+        trows+=`<tr>
+          <td style="font-weight:600;vertical-align:top;max-width:180px;overflow:hidden;text-overflow:ellipsis">${esc(rep.name)}</td>
+          <td style="vertical-align:top">${esc(rep.category||"—")}</td>
+          <td style="vertical-align:top">${esc(rep.sku||"—")}</td>
+          <td style="vertical-align:top"><div style="font-size:18px;font-weight:700">${total}</div><div style="font-size:11px;color:var(--text3)">${locs} loc${locs!==1?"s":""}</div></td>
+          <td style="vertical-align:top"><span class="badge ${st}">${statusLabel(st)}</span></td>
+          <td style="white-space:normal;font-size:12px;line-height:1.8;vertical-align:top">${locBreakdown(g)}</td>
+          <td style="vertical-align:top;white-space:nowrap">
+            <button class="ab" title="Move" onclick="openMove('${sid}')">🚚</button>
+            <button class="ab" title="Adjust qty" onclick="openQtyAdj('${sid}')">±</button>
+            <button class="ab" title="Delete" onclick="confirmDeleteGroup('${sid}')">🗑️</button>
+          </td></tr>`;
+        cards+=`<div class="mcard">
+          <div class="mcard-hdr"><div class="mcard-name">${esc(rep.name)}</div><span class="badge ${st}">${statusLabel(st)}</span></div>
+          <div style="display:flex;gap:16px;margin-bottom:10px">
+            <div><div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">Total Qty</div><div style="font-size:22px;font-weight:700">${total}</div></div>
+            <div><div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">Category</div><div style="font-size:13px;color:var(--text2)">${esc(rep.category||"—")}</div><div style="font-size:11px;color:var(--text3)">${locs} location${locs!==1?"s":""}</div></div>
+          </div>
+          <div style="background:var(--bg2);border-radius:var(--r);padding:10px;margin-bottom:10px;font-size:12px;line-height:1.9">${locBreakdown(g)}</div>
+          <div class="mcard-foot"><div style="font-size:12px;color:var(--text3)">SKU: ${esc(rep.sku||"—")}</div>
+            <div class="mcard-acts">
+              <button class="btn ic" onclick="openMove('${sid}')">🚚</button>
+              <button class="btn ic" onclick="openQtyAdj('${sid}')">±</button>
+              <button class="btn ic" onclick="confirmDeleteGroup('${sid}')">🗑️</button>
+            </div></div></div>`;
+      });
+    }
+    app.innerHTML = tabsHtml+statsHtml+`<div class="card">
+      ${toolbarHtml()}
+      <div class="tw"><table><thead><tr>
+        <th style="width:18%">Item</th><th style="width:13%">Category</th><th style="width:9%">SKU</th>
+        <th style="width:10%">Total Qty</th><th style="width:9%">Status</th>
+        <th style="width:33%">Location · Qty · Expiration</th><th style="width:8%">Actions</th>
+      </tr></thead><tbody>${trows}</tbody></table></div>
+      <div class="mcards">${cards}</div></div>`;
+    return;
+  }
+
+  // ── LOCATION TAB ──
+  const groups = groupByNameLoc(arr);
+  let trows="", cards="";
+  const empty=`<div class="empty"><div class="empty-icon">📭</div>${arr.length===0&&!UI.search&&UI.filterStatus==="all"&&UI.filterCat==="all"?"No items yet — tap + to add one.":"No items match your filters."}</div>`;
+
+  if(groups.length===0){ trows=`<tr><td colspan="8">${empty}</td></tr>`; cards=empty; }
+  else {
+    groups.forEach(g=>{
+      const rep=g[0];
+      const total=g.reduce((s,i)=>s+(i.qty||0),0);
+      const st=groupStatus(g);
+      const single=g.length===1;
+      const sid=encodeURIComponent(g.map(i=>i.id).join(","));
+      const qctrl = single
+        ? `<div class="qc"><button class="qb" onclick="doAdjust('${rep.id}',-1)">−</button><span class="qn">${total}</span><button class="qb" onclick="doAdjust('${rep.id}',1)">+</button></div>`
+        : `<div class="qc"><span class="qn" style="font-size:15px">${total}</span><button class="btn sm" style="margin-left:6px" onclick="openQtyAdj('${sid}')">±</button></div>`;
+      trows+=`<tr>
+        <td style="font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis">${esc(rep.name)}</td>
+        <td>${esc(rep.location)}</td>
+        <td>${esc(rep.category||"—")}</td>
+        <td>${esc(rep.sku||"—")}</td>
+        <td>${qctrl}</td>
+        <td><span class="badge ${st}">${statusLabel(st)}</span></td>
+        <td style="white-space:normal;font-size:12px;line-height:1.7">${expHtml(g)}</td>
+        <td style="white-space:nowrap">
+          <button class="ab" title="Move" onclick="openMove('${sid}')">🚚</button>
+          <button class="ab" title="Edit" onclick="openEdit('${rep.id}')">✏️</button>
+          <button class="ab" title="Delete" onclick="confirmDelete('${rep.id}')">🗑️</button>
+        </td></tr>`;
+      cards+=`<div class="mcard">
+        <div class="mcard-hdr"><div class="mcard-name">${esc(rep.name)}</div><span class="badge ${st}">${statusLabel(st)}</span></div>
+        <div class="mcard-grid">
+          <div class="mf"><span class="mf-l">Location</span><span class="mf-v">${esc(rep.location)}</span></div>
+          <div class="mf"><span class="mf-l">Category</span><span class="mf-v">${esc(rep.category||"—")}</span></div>
+          <div class="mf"><span class="mf-l">SKU</span><span class="mf-v">${esc(rep.sku||"—")}</span></div>
+          <div class="mf" style="grid-column:span 2"><span class="mf-l">Expiration(s)</span><span class="mf-v" style="font-size:12px">${expHtml(g)}</span></div>
+        </div>
+        <div class="mcard-foot">
+          ${single
+            ? `<div class="qc"><button class="qb" onclick="doAdjust('${rep.id}',-1)">−</button><span class="qn" style="font-size:16px">${total}</span><button class="qb" onclick="doAdjust('${rep.id}',1)">+</button></div>`
+            : `<div class="qc"><span style="font-weight:700;font-size:18px">${total}</span><button class="btn" style="margin-left:8px" onclick="openQtyAdj('${sid}')">± Adjust</button></div>`
+          }
+          <div class="mcard-acts">
+            <button class="btn ic" onclick="openMove('${sid}')">🚚</button>
+            <button class="btn ic" onclick="openEdit('${rep.id}')">✏️</button>
+            <button class="btn ic" onclick="confirmDelete('${rep.id}')">🗑️</button>
+          </div></div></div>`;
+    });
+  }
+  app.innerHTML = tabsHtml+statsHtml+`<div class="card">
+    ${toolbarHtml()}
+    <div class="tw"><table><thead><tr>
+      <th>Item</th><th>Location</th><th>Category</th><th>SKU</th>
+      <th>Qty</th><th>Status</th><th>Expiration(s)</th><th>Actions</th>
+    </tr></thead><tbody>${trows}</tbody></table></div>
+    <div class="mcards">${cards}</div></div>`;
+}
+
+/* ─────────────────────────────────────────────
+   RENDER: ACTIVITY
+───────────────────────────────────────────── */
+function renderAct(app){
+  let html=`<div class="card">`;
+  if(!ACTIVITY.length) html+=`<div class="empty"><div class="empty-icon">📋</div>No activity yet.</div>`;
+  else{
+    html+=`<div style="padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text2)">${ACTIVITY.length} event(s) — synced live</div>`;
+    ACTIVITY.forEach(a=>{ html+=`<div class="ai"><div class="ai-msg">${esc(a.msg)}</div><div class="ai-time">${a.time||"—"}</div></div>`; });
+  }
+  app.innerHTML=html+`</div>`;
+}
+
+/* ─────────────────────────────────────────────
+   RENDER: ALERTS
+───────────────────────────────────────────── */
+function renderAlr(app){
+  const arr = itemsArr();
+  const qm = qtyMap(arr);
+
+  // Build grouped view for low/out — deduplicate by name+location
+  const seen=new Set();
+  function groupedAlerts(filterFn){
+    const out=[];
+    groupByNameLoc(arr).forEach(g=>{
+      const k=(g[0].name||"").toLowerCase()+"||"+(g[0].location||"");
+      if(seen.has(k)) return;
+      if(filterFn(g)){ seen.add(k); out.push(g); }
+    });
+    return out;
+  }
+  seen.clear();
+  const outGroups=groupedAlerts(g=>g.reduce((s,i)=>s+(i.qty||0),0)===0);
+  seen.clear();
+  const lowGroups=groupedAlerts(g=>{
+    const t=g.reduce((s,i)=>s+(i.qty||0),0);
+    return t>0 && t<=(g[0].lowThreshold||LOW_DEFAULT) && !g.some(i=>i.expDate&&new Date(i.expDate)<new Date());
+  });
+  const expItems=arr.filter(i=>i.expDate&&new Date(i.expDate)<new Date());
+  const soonItems=arr.filter(i=>{const d=daysTo(i.expDate);return d!==null&&d>0&&d<=30;});
+
+  function groupRow(g){
+    const total=g.reduce((s,i)=>s+(i.qty||0),0);
+    const st=groupStatus(g);
+    return `<div class="ali">
+      <div class="ali-info"><div class="ali-name">${esc(g[0].name)}</div>
+      <div class="ali-sub">${esc(g[0].location)} · ${esc(g[0].category||"—")}</div></div>
+      <div style="display:flex;align-items:center;gap:8px"><span style="font-weight:700;font-size:15px">${total}</span><span class="badge ${st}">${statusLabel(st)}</span></div>
+    </div>`;
+  }
+  function itemRow(i){
+    const d=daysTo(i.expDate);
+    const st=recordStatus(i);
+    return `<div class="ali">
+      <div class="ali-info"><div class="ali-name">${esc(i.name)}</div>
+      <div class="ali-sub">${esc(i.location)} · Exp: ${i.expDate}${d!==null?` (${d}d)`:""}</div></div>
+      <div style="display:flex;align-items:center;gap:8px"><span style="font-weight:700;font-size:15px">${i.qty}</span><span class="badge ${st}">${statusLabel(st)}</span></div>
+    </div>`;
+  }
+  function section(color,title,rows,emptyMsg){
+    return `<div class="card as"><div class="as-hdr" style="color:${color}">${title}</div>${rows.length?rows.join(""):emptyRow(emptyMsg)}</div>`;
+  }
+  function emptyRow(msg){ return `<div style="padding:14px 16px;color:var(--text2);font-size:13px">${msg}</div>`; }
+
+  app.innerHTML=
+    section("var(--red)","🚫 Out of Stock ("+outGroups.length+")",outGroups.map(groupRow),"No out-of-stock items.")+
+    section("var(--yellow)","⚠️ Low Stock ("+lowGroups.length+")",lowGroups.map(groupRow),"No low-stock items.")+
+    section("var(--red)","🗓️ Expired ("+expItems.length+")",expItems.map(itemRow),"No expired items.")+
+    section("var(--yellow)","⏳ Expiring Within 30 Days ("+soonItems.length+")",soonItems.map(itemRow),"Nothing expiring soon.");
+}
+
+/* ─────────────────────────────────────────────
+   RENDER: EXPIRATION CALENDAR
+───────────────────────────────────────────── */
+function renderExp(app){
+  const arr = itemsArr();
+  const withDate = arr.filter(i=>i.expDate);
+  const noDate = arr.filter(i=>!i.expDate);
+  const now = new Date();
+
+  const groups={};
+  withDate.forEach(i=>{
+    const d=new Date(i.expDate);
+    const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+    (groups[k]=groups[k]||[]).push(i);
+  });
+  const keys=Object.keys(groups).sort();
+
+  function urgency(key){
+    const [y,m]=key.split("-");
+    const ms=new Date(+y,+m-1,1), me=new Date(+y,+m,0);
+    if(me<now) return "past";
+    if(ms.getFullYear()===now.getFullYear()&&ms.getMonth()===now.getMonth()) return "cur";
+    const nxt=new Date(now.getFullYear(),now.getMonth()+1,1);
+    if(ms>=nxt&&ms<new Date(now.getFullYear(),now.getMonth()+2,1)) return "next";
+    return "future";
+  }
+  const ustyle={
+    past:  {border:"var(--red)",  hc:"var(--red)",   hbg:"var(--red-bg)",    icon:"🚫"},
+    cur:   {border:"var(--yellow)",hc:"var(--yellow)",hbg:"var(--yellow-bg)", icon:"⚠️"},
+    next:  {border:"var(--yellow)",hc:"var(--yellow)",hbg:"var(--yellow-bg)", icon:"⏳"},
+    future:{border:"var(--border)",hc:"var(--text2)", hbg:"var(--bg2)",       icon:"🗓️"}
+  };
+  function mlabel(key){
+    const [y,m]=key.split("-");
+    return new Date(+y,+m-1,1).toLocaleString("default",{month:"long",year:"numeric"});
+  }
+  function irow(i){
+    const d=daysTo(i.expDate);
+    const dt=d===null?"":(d<=0?" · EXPIRED":d<=30?` · ${d}d left`:` · ${d}d`);
+    return `<div class="ali"><div class="ali-info"><div class="ali-name">${esc(i.name)}</div><div class="ali-sub">${esc(i.location)} · ${esc(i.category||"—")}${dt}</div></div><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:700">${i.qty}</span><span class="badge ${recordStatus(i)}">${statusLabel(recordStatus(i))}</span></div></div>`;
+  }
+
+  const expCount=withDate.filter(i=>new Date(i.expDate)<now).length;
+  const thisM=withDate.filter(i=>{const d=new Date(i.expDate);return d>=now&&d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();}).length;
+  const next30=withDate.filter(i=>{const d=daysTo(i.expDate);return d!==null&&d>0&&d<=30;}).length;
+
+  let html=`<div class="stats" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">
+    <div class="sc"><div class="sc-label">With Exp. Date</div><div class="sc-val">${withDate.length}</div></div>
+    <div class="sc"><div class="sc-label">Expired</div><div class="sc-val ${expCount>0?"r":""}">${expCount}</div></div>
+    <div class="sc"><div class="sc-label">This Month</div><div class="sc-val ${thisM>0?"y":""}">${thisM}</div></div>
+    <div class="sc"><div class="sc-label">Next 30 Days</div><div class="sc-val ${next30>0?"y":""}">${next30}</div></div>
+  </div>`;
+
+  if(!keys.length&&!noDate.length){
+    html+=`<div class="card"><div class="empty"><div class="empty-icon">🗓️</div>No expiration dates set yet.</div></div>`;
+    app.innerHTML=html; return;
+  }
+
+  keys.forEach(k=>{
+    const u=urgency(k),s=ustyle[u];
+    const items=groups[k].slice().sort((a,b)=>new Date(a.expDate)-new Date(b.expDate));
+    html+=`<div class="card as ecal-card" style="border-left-color:${s.border}">
+      <div class="as-hdr" style="color:${s.hc};background:${s.hbg};display:flex;justify-content:space-between">
+        <span>${s.icon} ${mlabel(k)}</span><span style="font-size:12px;opacity:.8">${items.length} item${items.length!==1?"s":""}</span>
+      </div>${items.map(irow).join("")}</div>`;
+  });
+
+  if(noDate.length){
+    html+=`<div class="card as" style="opacity:.75">
+      <div class="as-hdr" style="color:var(--text3);display:flex;justify-content:space-between"><span>📦 No Expiration Date</span><span style="font-size:12px">${noDate.length} item${noDate.length!==1?"s":""}</span></div>
+      ${noDate.sort((a,b)=>(a.name||"").localeCompare(b.name||"")).map(irow).join("")}</div>`;
+  }
+  app.innerHTML=html;
+}
+
+/* ─────────────────────────────────────────────
+   RENDER: SETTINGS
+───────────────────────────────────────────── */
+function renderCfg(app){
+  const c=getCfg()||{};
+  app.innerHTML=`<div class="scard"><div class="scard-hdr">⚙️ Firebase Configuration</div><div class="scard-body">
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6">Update your Firebase credentials. Changes take effect after saving.</p>
+    <div class="fg"><label>API Key</label><input id="s-ak" value="${esc(c.apiKey||"")}" placeholder="AIzaSy…"></div>
+    <div class="fg"><label>Auth Domain</label><input id="s-ad" value="${esc(c.authDomain||"")}" placeholder="project.firebaseapp.com"></div>
+    <div class="fg"><label>Database URL</label><input id="s-du" value="${esc(c.databaseURL||"")}" placeholder="https://project-default-rtdb.firebaseio.com"></div>
+    <div class="fg"><label>Project ID</label><input id="s-pi" value="${esc(c.projectId||"")}" placeholder="your-project-id"></div>
+    <div class="fg"><label>App ID</label><input id="s-ai" value="${esc(c.appId||"")}" placeholder="1:123456:web:abc…"></div>
+    <button class="btn p" style="width:100%;padding:12px;font-size:15px;margin-top:4px" onclick="saveCfgForm()">Save & Reconnect</button>
+    <div id="cfg-msg" style="margin-top:10px;font-size:13px;color:var(--green);text-align:center"></div>
+  </div></div>`;
+}
+
+/* ─────────────────────────────────────────────
+   MODAL SYSTEM
+   Key design: showModal sets modalOpen=true.
+   closeModal sets modalOpen=false, clears DOM, then re-renders.
+───────────────────────────────────────────── */
+function showModal(html, keepOpenOnBgClick=false){
+  modalOpen = true;
+  document.getElementById("modal-root").innerHTML=
+    `<div class="mbg" onclick="${keepOpenOnBgClick?"":"if(event.target===this)closeModal()"}"><div class="modal">${html}</div></div>`;
+}
+
+function closeModal(){
+  modalOpen = false;
+  document.getElementById("modal-root").innerHTML="";
+  render();
+}
+
+/* ─────────────────────────────────────────────
+   FORM DATA HELPER
+───────────────────────────────────────────── */
+function fval(id){ return (document.getElementById(id)?.value||"").trim(); }
+function fnum(id, def=0){ const v=parseInt(fval(id)); return isNaN(v)?def:v; }
+
+function getFormData(){
+  return {
+    name:    fval("f-name"),
+    sku:     fval("f-sku"),
+    category:document.getElementById("f-cat")?.value||CATS[0],
+    location:document.getElementById("f-loc")?.value||LOCS[0],
+    qty:     fnum("f-qty"),
+    lowThreshold: fnum("f-thr",5),
+    expDate: fval("f-exp"),
+    notes:   fval("f-notes")
+  };
+}
+
+/* ─────────────────────────────────────────────
+   ADD / EDIT MODALS
+───────────────────────────────────────────── */
+function openAdd(){
+  const loc = UI.tab>0 ? LOCS[UI.tab-1] : LOCS[0];
+  showModal(`<div class="mhandle"></div><h2>Add New Item</h2>
+    <div class="fg"><label>Item Name *</label><input id="f-name" placeholder="e.g. Hand Sanitizer 8oz" autofocus></div>
+    <div class="frow">
+      <div class="fg"><label>SKU / Barcode</label><input id="f-sku" placeholder="For scanning"></div>
+      <div class="fg"><label>Category</label><select id="f-cat">${CATS.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("")}</select></div>
+    </div>
+    <div class="fg"><label>Location *</label><select id="f-loc">${LOCS.map(l=>`<option value="${esc(l)}" ${l===loc?"selected":""}>${esc(l)}</option>`).join("")}</select></div>
+    <div class="frow">
+      <div class="fg"><label>Quantity *</label><input id="f-qty" type="number" min="0" value="0" inputmode="numeric"></div>
+      <div class="fg"><label>Low Alert At</label><input id="f-thr" type="number" min="1" value="5" inputmode="numeric"></div>
+    </div>
+    <div class="fg"><label>Expiration Date</label><input id="f-exp" type="date"></div>
+    <div class="fg"><label>Notes</label><input id="f-notes" placeholder="Optional"></div>
+    <div class="macts"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn p" onclick="doAdd()">Add Item</button></div>`);
+}
+
+function openEdit(id){
+  const item=DB[id]; if(!item) return;
+  showModal(`<div class="mhandle"></div><h2>Edit Item</h2>
+    <div class="fg"><label>Item Name *</label><input id="f-name" value="${esc(item.name)}" autofocus></div>
+    <div class="frow">
+      <div class="fg"><label>SKU / Barcode</label><input id="f-sku" value="${esc(item.sku||"")}"></div>
+      <div class="fg"><label>Category</label><select id="f-cat">${CATS.map(c=>`<option value="${esc(c)}" ${c===item.category?"selected":""}>${esc(c)}</option>`).join("")}</select></div>
+    </div>
+    <div class="fg"><label>Location *</label><select id="f-loc">${LOCS.map(l=>`<option value="${esc(l)}" ${l===item.location?"selected":""}>${esc(l)}</option>`).join("")}</select></div>
+    <div class="frow">
+      <div class="fg"><label>Quantity *</label><input id="f-qty" type="number" min="0" value="${item.qty}" inputmode="numeric"></div>
+      <div class="fg"><label>Low Alert At</label><input id="f-thr" type="number" min="1" value="${item.lowThreshold||5}" inputmode="numeric"></div>
+    </div>
+    <div class="fg"><label>Expiration Date</label><input id="f-exp" type="date" value="${item.expDate||""}"></div>
+    <div class="fg"><label>Notes</label><input id="f-notes" value="${esc(item.notes||"")}"></div>
+    <div class="macts"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn p" onclick="doEdit('${id}')">Save Changes</button></div>`);
+}
+
+async function doAdd(){
+  const d=getFormData();
+  if(!d.name){alert("Item name is required.");return;}
+  closeModal();
+  await addItem(d);
+}
+
+async function doEdit(id){
+  const d=getFormData();
+  if(!d.name){alert("Item name is required.");return;}
+  closeModal();
+  await saveItem(id,d);
+}
+
+/* ─────────────────────────────────────────────
+   DELETE
+───────────────────────────────────────────── */
+async function confirmDelete(id){
+  const item=DB[id]; if(!item) return;
+  if(!confirm(`Delete "${item.name}" from ${item.location} (qty: ${item.qty})?\n\nThis cannot be undone.`)) return;
+  await deleteRecord(id);
+}
+
+async function confirmDeleteGroup(sid){
+  const ids=decodeURIComponent(sid).split(",").filter(Boolean);
+  const group=ids.map(id=>DB[id]).filter(Boolean);
+  if(!group.length) return;
+  const rep=group[0];
+  const total=group.reduce((s,i)=>s+(i.qty||0),0);
+  const locs=[...new Set(group.map(i=>i.location))];
+  const lines=locs.map(l=>{
+    const qty=group.filter(i=>i.location===l).reduce((s,i)=>s+(i.qty||0),0);
+    return `  • ${l}: ${qty} units`;
+  }).join("\n");
+  const msg=group.length===1
+    ?`Delete "${rep.name}" (${rep.location}, qty: ${total})?\n\nThis cannot be undone.`
+    :`Delete ALL records of "${rep.name}" across ${locs.length} location${locs.length!==1?"s":""}?\n\n${lines}\n\nTotal: ${total} units. This cannot be undone.`;
+  if(!confirm(msg)) return;
+  await Promise.all(ids.map(id=>remove(ref(db,`items/${id}`))));
+  await log(`Deleted all records of "${rep.name}" (${total} units across ${locs.join(", ")})`);
+}
+
+/* ─────────────────────────────────────────────
+   DIRECT QTY ADJUST (single-record +/- buttons)
+   Uses setQty directly — no modal involved.
+───────────────────────────────────────────── */
+async function doAdjust(id, delta){
+  await adjustQty(id, delta);
+}
+
+/* ─────────────────────────────────────────────
+   QTY ADJUST MODAL (multi-expiration groups)
+───────────────────────────────────────────── */
+function openQtyAdj(sid){
+  const ids=decodeURIComponent(sid).split(",").filter(Boolean);
+  const group=ids.map(id=>DB[id]).filter(Boolean);
+  if(!group.length) return;
+  const rep=group[0];
+  const multiLoc=[...new Set(group.map(i=>i.location))].length>1;
+  const sorted=group.slice().sort((a,b)=>{
+    const lc=(a.location||"").localeCompare(b.location||"");
+    return lc!==0?lc:new Date(a.expDate||"9999")-new Date(b.expDate||"9999");
+  });
+
+  // Store sorted list for button handlers to reference by index
+  window._qtyRows = sorted.map(i=>({ id:i.id, qty:i.qty||0 }));
+
+  let rows="";
+  sorted.forEach((item, idx)=>{
+    const locLine=multiLoc?`<div class="qbatch-loc">${esc(item.location)}</div>`:"";
+    const expLine=item.expDate?`Exp ${item.expDate}`:"No exp date";
+    rows+=`<div class="qbatch">
+      <div class="qbatch-info">
+        ${locLine}
+        <div class="qbatch-exp">${expLine}</div>
+        <div class="qbatch-cur" id="qcur-${idx}">Current: ${item.qty}</div>
+      </div>
+      <div class="qc">
+        <button class="qb" onclick="qStep(${idx},-1)">−</button>
+        <input id="qval-${idx}" type="number" min="0" value="${item.qty}" inputmode="numeric"
+          style="width:52px;padding:5px 4px;border:1px solid var(--border2);border-radius:var(--r);font-size:15px;background:var(--bg);color:var(--text);text-align:center"
+          oninput="qInput(${idx},parseInt(this.value)||0)">
+        <button class="qb" onclick="qStep(${idx},1)">+</button>
+      </div>
+    </div>`;
+  });
+
+  const subtitle=multiLoc
+    ?`${[...new Set(group.map(i=>i.location))].length} locations · ${group.reduce((s,i)=>s+(i.qty||0),0)} total`
+    :esc(rep.location);
+
+  showModal(`<div class="mhandle"></div><h2>± Adjust Quantities</h2>
+    <div style="background:var(--bg2);border-radius:var(--r);padding:12px;margin-bottom:16px">
+      <div style="font-weight:700;font-size:15px;margin-bottom:2px">${esc(rep.name)}</div>
+      <div style="font-size:13px;color:var(--text2)">${subtitle}</div>
+    </div>
+    ${rows}
+    <div class="macts"><button class="btn p" style="flex:1" onclick="closeModal()">Done</button></div>`);
+}
+
+// Step a qty row by delta — uses index, never touches another row
+async function qStep(idx, delta){
+  const inp=document.getElementById("qval-"+idx);
+  if(!inp) return;
+  const cur=parseInt(inp.value)||0;
+  await qInput(idx, cur+delta);
+}
+
+// Set a specific qty row by index to newVal
+async function qInput(idx, newVal){
+  const rows=window._qtyRows||[];
+  if(idx<0||idx>=rows.length) return;
+  newVal=Math.max(0,isNaN(newVal)?0:newVal);
+  const inp=document.getElementById("qval-"+idx);
+  const lbl=document.getElementById("qcur-"+idx);
+  if(inp) inp.value=newVal;
+  if(lbl) lbl.textContent="Current: "+newVal;
+  await setQty(rows[idx].id, newVal);
+}
+
+// doQtySet kept for compatibility but now unused internally
+async function doQtySet(id, newQty){
+  newQty=Math.max(0,isNaN(newQty)?0:newQty);
+  const inp=document.getElementById("qval-"+id);
+  const cur=document.getElementById("qcur-"+id);
+  if(inp) inp.value=newQty;
+  if(cur) cur.textContent="Current: "+newQty;
+  await setQty(id, newQty);
+}
+
+/* ─────────────────────────────────────────────
+   MOVE MODAL
+───────────────────────────────────────────── */
+function openMove(sid){
+  const ids=decodeURIComponent(sid).split(",").filter(Boolean);
+  const group=ids.map(id=>DB[id]).filter(Boolean);
+  if(!group.length) return;
+  const rep=group[0];
+  const total=group.reduce((s,i)=>s+(i.qty||0),0);
+  const multiLoc=[...new Set(group.map(i=>i.location))].length>1;
+
+  const sorted=group.slice().sort((a,b)=>{
+    const lc=(a.location||"").localeCompare(b.location||"");
+    return lc!==0?lc:new Date(a.expDate||"9999")-new Date(b.expDate||"9999");
+  });
+
+  // Snapshot stored by timestamp key — index-based inputs (mv-0, mv-1, ...) avoid ID issues
+  const snapKey="_mv_"+Date.now();
+  window[snapKey]=sorted.map(i=>({
+    id:i.id, name:i.name, location:i.location,
+    expDate:i.expDate||"", qty:i.qty||0,
+    sku:i.sku||"", category:i.category||"Other",
+    lowThreshold:i.lowThreshold||LOW_DEFAULT, notes:i.notes||""
+  }));
+
+  let rows="";
+  sorted.forEach((item, idx)=>{
+    const locLine=multiLoc?`<div class="mbatch-loc">${esc(item.location)}</div>`:"";
+    const expLine=item.expDate?`Exp ${item.expDate}`:"No exp date";
+    rows+=`<div class="mbatch">
+      <div class="mbatch-info">
+        ${locLine}
+        <div class="mbatch-exp">${expLine}</div>
+        <div class="mbatch-stock">${item.qty} in stock</div>
+      </div>
+      <input id="mv-${idx}" type="number" min="0" max="${item.qty}" value="0" inputmode="numeric" placeholder="0"
+        oninput="updateMvTotal('${snapKey}')">
+    </div>`;
+  });
+
+  const destOpts=multiLoc
+    ? LOCS.map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join("")
+    : LOCS.filter(l=>l!==rep.location).map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join("");
+
+  const fromLabel=multiLoc
+    ?`${[...new Set(group.map(i=>i.location))].length} locations · ${total} total in stock`
+    :`From: ${esc(rep.location)} · ${total} total in stock`;
+
+  showModal(`<div class="mhandle"></div><h2>🚚 Move Stock</h2>
+    <div style="background:var(--bg2);border-radius:var(--r);padding:12px;margin-bottom:16px">
+      <div style="font-weight:700;font-size:15px;margin-bottom:2px">${esc(rep.name)}</div>
+      <div style="font-size:13px;color:var(--text2)">${fromLabel}</div>
+    </div>
+    <div class="fg"><label>Qty to move — per batch (0 = skip)</label>
+      ${rows}
+      <div style="font-size:12px;color:var(--text3);margin-top:4px">Each batch keeps its expiration date at the destination.</div>
+    </div>
+    <div id="mv-total" style="font-size:13px;font-weight:600;color:var(--blue);min-height:20px;margin-bottom:14px">Enter quantities above</div>
+    <div class="fg"><label>Move To *</label>
+      <select id="mv-dest" style="width:100%;padding:11px 14px;border:1px solid var(--border2);border-radius:var(--r);font-size:16px;background:var(--bg2);color:var(--text)">
+        ${destOpts}
+      </select>
+    </div>
+    <div class="macts">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn p" onclick="doMove('${snapKey}')">Move Stock</button>
+    </div>`);
+}
+
+function updateMvTotal(snapKey){
+  const snap=window[snapKey]||[];
+  let t=0;
+  snap.forEach((_,idx)=>{
+    const v=parseInt(document.getElementById("mv-"+idx)?.value||"0");
+    if(!isNaN(v)&&v>0) t+=v;
+  });
+  const el=document.getElementById("mv-total");
+  if(el) el.textContent=t>0?`Moving ${t} unit${t!==1?"s":""} total`:"Enter quantities above";
+}
+
+async function doMove(snapKey){
+  const snap=window[snapKey];
+  if(!snap||!snap.length){ alert("Move data lost — please try again."); return; }
+  const dest=document.getElementById("mv-dest")?.value;
+  if(!dest){ alert("Please select a destination."); return; }
+
+  // Step 1: Read ALL quantities from DOM now (before closing modal)
+  const ops=[];
+  let totalMoved=0;
+  for(let idx=0; idx<snap.length; idx++){
+    const item=snap[idx];
+    const rawVal=document.getElementById("mv-"+idx)?.value||"0";
+    const moveQty=parseInt(rawVal);
+    if(isNaN(moveQty)||moveQty<=0) continue;
+    if(moveQty>item.qty){
+      alert(`Cannot move ${moveQty} of "${item.name}" (${item.expDate||"no exp date"}, ${item.location}) — only ${item.qty} available.`);
+      return;
+    }
+    ops.push({item, moveQty});
+    totalMoved+=moveQty;
+  }
+
+  if(totalMoved===0){ alert("Enter at least one quantity greater than 0."); return; }
+
+  // Step 2: Close modal silently before writes
+  modalOpen=false;
+  document.getElementById("modal-root").innerHTML="";
+  delete window[snapKey];
+
+  // Step 3: Execute all Firebase writes
+  // Capture destination qtys BEFORE any writes so we don't read mid-flight values
+  const destQtyCache={};
+  for(const {item} of ops){
+    const existing=itemsArr().find(r=>
+      r.id!==item.id &&
+      (r.name||"").toLowerCase().trim()===(item.name||"").toLowerCase().trim() &&
+      r.location===dest &&
+      (r.expDate||"")===(item.expDate||"")
+    );
+    if(existing) destQtyCache[item.expDate+"||"+dest]={ id:existing.id, qty:existing.qty||0 };
+  }
+
+  for(const {item, moveQty} of ops){
+    // Deduct from source
+    await setQty(item.id, item.qty - moveQty);
+
+    // Add to destination (use pre-captured qty to avoid mid-flight read)
+    const cacheKey=item.expDate+"||"+dest;
+    if(destQtyCache[cacheKey]){
+      const {id, qty}=destQtyCache[cacheKey];
+      await setQty(id, qty+moveQty);
+      // Update cache in case two batches share same dest
+      destQtyCache[cacheKey].qty=qty+moveQty;
+    } else {
+      const nr=push(ref(db,"items"));
+      await set(nr,{
+        name:item.name, sku:item.sku, category:item.category,
+        location:dest, qty:moveQty,
+        lowThreshold:item.lowThreshold, expDate:item.expDate, notes:item.notes,
+        createdAt:Date.now()
+      });
+    }
+  }
+
+  const fromLocs=[...new Set(snap.map(i=>i.location))].join(", ");
+  await log(`Moved ${totalMoved} of "${snap[0].name}" from ${fromLocs} → ${dest}`);
+  render();
+}
+
+/* ─────────────────────────────────────────────
+   SCAN MODAL
+───────────────────────────────────────────── */
+function openScan(){
+  showModal(`<div class="mhandle"></div><h2>📷 Scan Item In</h2>
+    <div class="scan-area" onclick="document.getElementById('scan-in').focus()">
+      <div style="font-size:28px;margin-bottom:8px">📷</div>
+      Tap here then scan a barcode or type a SKU
+    </div>
+    <input id="scan-in" placeholder="Scan or type SKU + Enter"
+      style="width:100%;padding:12px 14px;border:1px solid var(--border2);border-radius:var(--r);font-size:16px;background:var(--bg2);color:var(--text);margin-bottom:10px"
+      onkeydown="if(event.key==='Enter'){doScan(this.value.trim());this.value='';}" autocomplete="off" inputmode="text">
+    <div id="scan-result" class="scan-result">Waiting for scan…</div>
+    <div style="margin-top:10px;font-size:12px;color:var(--text3)">Each scan adds 1 unit to the matching item.</div>
+    <div class="macts"><button class="btn p" style="flex:1" onclick="closeModal()">Done</button></div>`,true);
+  setTimeout(()=>document.getElementById("scan-in")?.focus(),100);
+}
+
+async function doScan(sku){
+  if(!sku) return;
+  const item=itemsArr().find(i=>i.sku&&i.sku.toLowerCase()===sku.toLowerCase());
+  const el=document.getElementById("scan-result");
+  if(item){
+    await adjustQty(item.id,1);
+    if(el){ el.textContent=`✓ ${item.name} — added 1 unit`; el.className="scan-result found"; }
+  } else {
+    if(el){ el.textContent=`No item with SKU "${sku}". Add it manually first.`; el.className="scan-result notfound"; }
+  }
+}
+
+/* ─────────────────────────────────────────────
+   SETTINGS FORM SUBMIT
+───────────────────────────────────────────── */
+function saveCfgForm(){
+  const c={
+    apiKey:fval("s-ak"), authDomain:fval("s-ad"),
+    databaseURL:fval("s-du"), projectId:fval("s-pi"), appId:fval("s-ai")
+  };
+  saveCfg(c);
+  const m=document.getElementById("cfg-msg");
+  if(m) m.textContent="Saved! Reloading…";
+  setTimeout(()=>location.reload(),1200);
+}
+
+/* ─────────────────────────────────────────────
+   SETUP SCREEN
+───────────────────────────────────────────── */
+function showSetup(){
+  document.getElementById("app").innerHTML=`<div class="setup-wrap"><div class="setup-card">
+    <div style="font-size:40px;margin-bottom:12px;text-align:center">🔗</div>
+    <h2>Connect to Firebase</h2>
+    <p>Paste your Firebase project values below. You only do this once per device.</p>
+    <div class="fg"><label>API Key</label><input id="su-ak" placeholder="AIzaSy…"></div>
+    <div class="fg"><label>Auth Domain</label><input id="su-ad" placeholder="project.firebaseapp.com"></div>
+    <div class="fg"><label>Database URL</label><input id="su-du" placeholder="https://project-default-rtdb.firebaseio.com"></div>
+    <div class="fg"><label>Project ID</label><input id="su-pi" placeholder="your-project-id"></div>
+    <div class="fg"><label>App ID</label><input id="su-ai" placeholder="1:123456789:web:abc…"></div>
+    <button class="btn p" style="width:100%;padding:12px;font-size:15px;margin-top:4px" onclick="doSetup()">Connect & Start</button>
+    <div id="su-err" class="setup-err"></div>
+  </div></div>`;
+}
+
+function doSetup(){
+  const c={
+    apiKey:fval("su-ak"), authDomain:fval("su-ad"),
+    databaseURL:fval("su-du"), projectId:fval("su-pi"), appId:fval("su-ai")
+  };
+  if(!c.apiKey||!c.databaseURL||!c.projectId){
+    document.getElementById("su-err").textContent="Please fill in all required fields.";
+    return;
+  }
+  saveCfg(c);
+  location.reload();
+}
+
+/* ─────────────────────────────────────────────
+   EXPOSE TO HTML onclick=
+───────────────────────────────────────────── */
+Object.assign(window,{
+  UI, V, render, closeModal,
+  openAdd, openEdit, openScan, openMove, openQtyAdj,
+  doAdd, doEdit, doScan, doMove, doQtySet, doAdjust,
+  qStep, qInput,
+  confirmDelete, confirmDeleteGroup,
+  updateMvTotal, saveCfgForm, doSetup, showSetup
+});
+
+/* ─────────────────────────────────────────────
+   BOOT
+───────────────────────────────────────────── */
+const cfg=getCfg();
+if(cfg&&cfg.apiKey&&cfg.databaseURL){ initFB(cfg); V("inv"); }
+else { showSetup(); }
+</script>
+</body>
+</html>
