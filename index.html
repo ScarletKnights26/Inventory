@@ -2781,13 +2781,20 @@ Object.assign(window,{
 /* ════════════════════════════════════════════
    BOOT
 ════════════════════════════════════════════ */
-const cfg = getCfg();
-if(cfg && cfg.apiKey && cfg.databaseURL){
-  initFB(cfg);
-  V("inv");
-} else {
-  showSetup();
-}
+// Firebase config hardcoded — no setup screen needed
+const HARDCODED_CFG = {
+  apiKey:            "AIzaSyBTjWflS6wFeltlSnh6nO9AHKhRte--UOU",
+  authDomain:        "inventory-manager-e0aa6.firebaseapp.com",
+  databaseURL:       "https://inventory-manager-e0aa6-default-rtdb.firebaseio.com",
+  projectId:         "inventory-manager-e0aa6",
+  storageBucket:     "inventory-manager-e0aa6.firebasestorage.app",
+  messagingSenderId: "129879289954",
+  appId:             "1:129879289954:web:a521975c63955df3f5e13b"
+};
+// Also save to localStorage so settings page shows current values
+saveCfg(HARDCODED_CFG);
+initFB(HARDCODED_CFG);
+
 </script>
 </body>
 </html>
